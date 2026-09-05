@@ -1,3 +1,5 @@
+Bienvenue sur le projet amalgamG3 !
+
 # amalgamG3
 
 Une carte d'identité numérique vérifiée pour le commerce : les particuliers créent un compte,
