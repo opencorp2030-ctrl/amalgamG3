@@ -69,6 +69,17 @@ Les identifiants Supabase (URL + clé anonyme) sont dans `assets/js/config.js` �
 prévue pour être publique, l'accès aux données est imposé par les policies RLS et les Edge
 Functions côté Supabase, pas par le secret de la clé.
 
+## FAQ - Confidentialité des données
+
+- **Les commerçants ont-ils accès à ma pièce d'identité ?**  
+  Non. amalgamG3 permet de confirmer votre identité ou votre âge sans jamais transmettre le document d'identité au commerçant. Seules les informations minimales configurées et expressément consenties sont partagées.
+
+- **Où sont stockées mes données personnelles et comment sont-elles protégées ?**  
+  Les données sont stockées de façon sécurisée sur Supabase (Postgres, Auth et Storage). L'accès aux données est strictement restreint par des politiques de sécurité au niveau des lignes (Row Level Security - RLS) et contrôlé par des Edge Functions côté serveur.
+
+- **Comment fonctionne le consentement lors d'une vérification ?**  
+  Un écran de consentement explicite s'affiche à chaque demande de vérification (en caisse ou via un widget en ligne), présentant clairement la liste exacte des champs transmis avant toute validation par l'utilisateur.
+
 ## Mentions légales
 
 Le contenu de `legal.html` contient des champs à compléter (identité de l'éditeur, SIRET, contact)
