@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Créer un compte — amalgamG3</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="assets/img/favicon-32.png?v=1787907977" type="image/png" sizes="32x32">
+<link rel="icon" href="assets/img/favicon-16.png?v=1787907977" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=1787907977">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css?v=1787907977">
+</head>
+<body>
+
+<div class="nav">
+  <div class="logo"><a href="index.html" style="color:inherit;text-decoration:none">amalgam<span>G3</span><span class="baseline">Identification &amp; vérification en commerce</span></a></div>
+  <div class="nav-actions"><a class="btn ghost" href="login.html">Déjà un compte ?</a></div>
+</div>
+
+<div class="container">
+  <div class="form-card">
+    <h2>Créer un compte</h2>
+
+    <div class="role-switch">
+      <label><input type="radio" name="role" value="user" checked><span>Particulier</span></label>
+      <label><input type="radio" name="role" value="merchant"><span>Commerce</span></label>
+    </div>
+
+    <form id="signup-form">
+      <label for="full_name">Nom complet</label>
+      <input id="full_name" type="text" required autocomplete="name">
+
+      <div id="dob-field">
+        <label for="date_of_birth">Date de naissance</label>
+        <input id="date_of_birth" type="date" required>
+      </div>
+
+      <div id="business-field" class="hidden">
+        <label for="business_name">Nom du commerce</label>
+        <input id="business_name" type="text">
+      </div>
+
+      <label for="email">Email</label>
+      <input id="email" type="email" required autocomplete="email">
+
+      <label for="password">Mot de passe</label>
+      <input id="password" type="password" required minlength="8" autocomplete="new-password">
+
+      <div class="confirm-check" style="display:flex;gap:10px;align-items:flex-start;margin-top:18px;padding:14px;background:var(--grey-bg-alt);border:1px solid var(--grey-border)">
+        <input type="checkbox" id="cgu-checkbox" required style="width:auto;margin-top:3px">
+        <label for="cgu-checkbox" style="margin:0;font-weight:400;font-size:0.88rem">
+          J'accepte les <a href="legal.html#confidentialite" target="_blank">mentions légales et la politique de confidentialité</a> d'amalgamG3.
+        </label>
+      </div>
+
+      <div class="submit-row">
+        <button class="btn" type="submit">Créer mon compte</button>
+      </div>
+      <div id="msg"></div>
+    </form>
+
+    <div class="link-row">Déjà inscrit ? <a href="login.html">Se connecter</a></div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-inner">
+    <div>amalgamG3 — Système d'identification pour commerces.<br>Service privé, non affilié à une administration ou un service public.</div>
+    <div class="footer-links">
+      <a href="index.html">Accueil</a>
+      <a href="legal.html#accessibilite">Accessibilité</a>
+      <a href="legal.html#mentions">Mentions légales</a>
+      <a href="legal.html#confidentialite">Confidentialité</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/js/config.js?v=1787907977"></script>
+<script>
+const params = new URLSearchParams(location.search);
+if (params.get("role") === "merchant") {
+  document.querySelector('input[value="merchant"]').checked = true;
+}
+
+function syncRoleFields() {
+  const role = document.querySelector('input[name="role"]:checked').value;
+  document.getElementById("business-field").classList.toggle("hidden", role !== "merchant");
+}
+document.querySelectorAll('input[name="role"]').forEach(r => r.addEventListener("change", syncRoleFields));
+syncRoleFields();
+
+const form = document.getElementById("signup-form");
+const msg = document.getElementById("msg");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  msg.className = "msg"; msg.textContent = "";
+
+  if (!document.getElementById("cgu-checkbox").checked) {
+    msg.className = "msg error";
+    msg.textContent = "Tu dois accepter les mentions légales et la politique de confidentialité pour créer un compte.";
+    return;
+  }
+
+  const role = document.querySelector('input[name="role"]:checked').value;
+  const full_name = document.getElementById("full_name").value.trim();
+  const date_of_birth = document.getElementById("date_of_birth").value;
+  const business_name = document.getElementById("business_name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+
+  const { data, error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { role, full_name, date_of_birth, business_name: business_name || null }
+    }
+  });
+
+  if (error) {
+    msg.className = "msg error";
+    if (/already registered|already exists|user_already_exists/i.test(error.message)) {
+      msg.innerHTML = `Un compte existe déjà avec cet email. Un email ne peut servir qu'à un seul compte (particulier <em>ou</em> commerce, pas les deux). <a href="login.html">Se connecter</a> ou utilise une autre adresse email.`;
+    } else if (/password/i.test(error.message) && /least|short|weak/i.test(error.message)) {
+      msg.textContent = "Mot de passe trop court ou trop faible (8 caractères minimum).";
+    } else if (/invalid/i.test(error.message) && /email/i.test(error.message)) {
+      msg.textContent = "Adresse email invalide.";
+    } else {
+      msg.textContent = error.message;
+    }
+    return;
+  }
+
+  if (!data.session) {
+    msg.className = "msg ok";
+    msg.textContent = "Compte créé ! Vérifie ta boîte mail pour confirmer ton adresse avant de te connecter.";
+    return;
+  }
+
+  msg.className = "msg ok";
+  msg.textContent = "Compte créé ! Redirection...";
+
+  const next = params.get("next");
+  const dest = (next && next.startsWith("verify.html")) ? next : (role === "merchant" ? "merchant.html" : "dashboard.html");
+  setTimeout(() => { window.location.href = dest; }, 900);
+});
+</script>
+
+</body>
+</html>

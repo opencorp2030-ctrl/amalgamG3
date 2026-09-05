@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scanner — amalgamG3</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="assets/img/favicon-32.png?v=1787907977" type="image/png" sizes="32x32">
+<link rel="icon" href="assets/img/favicon-16.png?v=1787907977" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=1787907977">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css?v=1787907977">
+</head>
+<body>
+
+<div class="nav">
+  <div class="logo"><a href="index.html" style="color:inherit;text-decoration:none">amalgam<span>G3</span><span class="baseline">Identification &amp; vérification en commerce</span></a></div>
+  <div class="nav-actions"><button class="btn ghost" id="logout-btn">Déconnexion</button></div>
+</div>
+
+<div style="background:var(--grey-bg-alt);border-bottom:1px solid var(--grey-border);padding:12px 24px;display:flex;gap:24px;flex-wrap:wrap">
+  <a href="merchant.html" style="color:var(--blue-france);font-weight:600;text-decoration:none;border-bottom:2px solid var(--blue-france);padding-bottom:4px">Scanner</a>
+  <a href="merchant-profile.html" style="color:var(--grey-text);font-weight:600;text-decoration:none">Mon commerce</a>
+  <a href="merchant-widgets.html" style="color:var(--grey-text);font-weight:600;text-decoration:none">App &amp; Site web</a>
+  <a href="merchant-ai.html" style="color:var(--grey-text);font-weight:600;text-decoration:none">IA &amp; MCP</a>
+</div>
+
+<div class="container">
+
+  <div id="profile-incomplete-notice" class="msg error hidden" style="margin-bottom:20px">
+    Complète le profil de ton commerce (logo, description, type de service) pour débloquer le scanner — c'est obligatoire. <a href="merchant-profile.html">Compléter mon profil</a>
+  </div>
+
+  <div id="main-content" class="hidden">
+
+  <div class="grid-2">
+
+    <div class="panel">
+      <h3>Scanner une carte client</h3>
+      <div id="camera-start">
+        <p class="wallet-note" style="text-align:left;margin-top:0">Autorise l'accès à la caméra pour scanner les QR codes.</p>
+        <div class="submit-row" style="max-width:240px"><button class="btn" id="start-camera-btn">Activer la caméra</button></div>
+      </div>
+      <div id="reader" class="hidden"></div>
+      <p id="camera-error" class="msg error hidden"></p>
+
+      <label for="manual-uid" style="margin-top:20px">Ou saisir l'identifiant complet de la carte manuellement</label>
+      <input id="manual-uid" type="text" placeholder="identifiant complet (36 caractères), pas les 8 premiers affichés sur la carte">
+      <p class="wallet-note" style="text-align:left">Le client doit te le copier via le bouton "Copier l'identifiant complet" de sa carte — les 8 caractères visibles sur la carte ne suffisent pas.</p>
+      <div class="submit-row">
+        <button class="btn" id="manual-btn">Vérifier</button>
+      </div>
+
+      <label for="rfid-input" style="margin-top:24px">Ou badger avec un lecteur RFID (PC)</label>
+      <input id="rfid-input" type="text" placeholder="Place le curseur ici, puis approche le badge du lecteur…">
+      <p class="wallet-note" style="text-align:left">Uniquement sur les appareils avec un lecteur RFID USB branché (il se comporte comme un clavier) — la vérification se lance automatiquement.</p>
+
+      <div id="nfc-section" class="hidden">
+        <div class="submit-row" style="margin-top:14px"><button class="btn ghost" id="nfc-btn">Badger via NFC (téléphone)</button></div>
+        <p class="wallet-note" style="text-align:left">Approche la carte d'identité/badge du client à l'arrière de ton téléphone.</p>
+      </div>
+
+      <div id="scan-result" class="scan-result hidden"></div>
+    </div>
+
+    <div id="result-modal" class="hidden" style="position:fixed;inset:0;background:rgba(11,31,58,0.85);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div style="background:var(--white);padding:24px;max-width:360px;width:100%">
+        <div id="result-modal-content"></div>
+        <div class="submit-row"><button class="btn" id="close-result-modal-btn">Fermer</button></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Mes derniers scans</h3>
+      <table class="log-table" id="log-table">
+        <thead><tr><th>Date</th><th>Résultat</th><th>Entrée</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p id="no-logs" class="wallet-note hidden">Aucun scan pour l'instant.</p>
+    </div>
+
+  </div>
+
+  </div> <!-- /main-content -->
+</div>
+
+<div class="footer">
+  <div class="footer-inner">
+    <div>amalgamG3 — Système d'identification pour commerces.<br>Service privé, non affilié à une administration ou un service public.</div>
+    <div class="footer-links">
+      <a href="index.html">Accueil</a>
+      <a href="legal.html#accessibilite">Accessibilité</a>
+      <a href="legal.html#mentions">Mentions légales</a>
+      <a href="legal.html#confidentialite">Confidentialité</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="assets/js/config.js?v=1787907977"></script>
+<script>
+let currentUser = null;
+let currentSession = null;
+let currentProfile = null;
+
+async function forceReloginWithMessage(message) {
+  console.error(message);
+  await supabaseClient.auth.signOut();
+  window.location.href = "login.html?msg=" + encodeURIComponent(message);
+}
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href = "login.html"; return; }
+  currentSession = session;
+  currentUser = session.user;
+
+  let { data: profile, error: profileErr } = await supabaseClient
+    .from("profiles")
+    .select("role, min_age, logo_path, description, service_type")
+    .eq("id", currentUser.id)
+    .maybeSingle();
+
+  if (profileErr) { await forceReloginWithMessage("Erreur de session : " + profileErr.message); return; }
+
+  if (!profile) {
+    // Filet de sécurité : le trigger de création automatique du profil a pu échouer à l'inscription.
+    const meta = currentUser.user_metadata || {};
+    if (meta.role !== "merchant") { window.location.href = "dashboard.html"; return; }
+    const { data: created, error: createErr } = await supabaseClient
+      .from("profiles")
+      .insert({
+        id: currentUser.id,
+        role: "merchant",
+        full_name: meta.full_name || "",
+        date_of_birth: meta.date_of_birth || "2000-01-01",
+        business_name: meta.business_name || null,
+      })
+      .select("role, min_age, logo_path, description, service_type")
+      .single();
+    if (createErr) {
+      await forceReloginWithMessage("Ta session n'est plus valide (compte supprimé ou modifié). Reconnecte-toi.");
+      return;
+    }
+    profile = created;
+  }
+
+  if (profile.role !== "merchant") { window.location.href = "dashboard.html"; return; }
+  currentProfile = profile;
+
+  const complete = !!(profile.logo_path && profile.description && profile.service_type);
+  document.getElementById("main-content").classList.toggle("hidden", !complete);
+  document.getElementById("profile-incomplete-notice").classList.toggle("hidden", complete);
+
+  if (complete) loadLogs();
+}
+
+let qrScanner = null;
+
+document.getElementById("start-camera-btn").addEventListener("click", startScanner);
+
+async function startScanner() {
+  getAudioCtx(); // déverrouille l'audio sur iOS (doit être créé pendant un clic utilisateur)
+  const errorBox = document.getElementById("camera-error");
+  errorBox.classList.add("hidden");
+
+  // Demande explicite d'accès caméra déclenchée par un clic : indispensable sur mobile
+  // (Safari iOS et d'autres navigateurs bloquent silencieusement une demande auto au chargement).
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    stream.getTracks().forEach(t => t.stop()); // on ne fait que déclencher la permission ici
+  } catch (e) {
+    errorBox.textContent = "Accès à la caméra refusé ou indisponible (" + e.message + "). Vérifie les autorisations caméra du site dans les réglages de ton navigateur, ou utilise la saisie manuelle.";
+    errorBox.classList.remove("hidden");
+    return;
+  }
+
+  document.getElementById("camera-start").classList.add("hidden");
+  document.getElementById("reader").classList.remove("hidden");
+
+  qrScanner = new Html5Qrcode("reader");
+  try {
+    const cameras = await Html5Qrcode.getCameras();
+    if (!cameras || cameras.length === 0) {
+      errorBox.textContent = "Aucune caméra détectée sur cet appareil.";
+      errorBox.classList.remove("hidden");
+      document.getElementById("reader").classList.add("hidden");
+      document.getElementById("camera-start").classList.remove("hidden");
+      return;
+    }
+    await qrScanner.start(
+      { facingMode: "environment" },
+      {
+        fps: 10,
+        qrbox: (viewfinderWidth, viewfinderHeight) => {
+          const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.75);
+          return { width: size, height: size };
+        },
+      },
+      (decodedText) => {
+        qrScanner.pause(true);
+        verifyCard(decodedText).finally(() => setTimeout(() => qrScanner.resume(), 2500));
+      },
+      () => {}
+    );
+  } catch (e) {
+    errorBox.textContent = "Impossible de démarrer le scanner (" + e.message + "). Utilise la saisie manuelle.";
+    errorBox.classList.remove("hidden");
+    document.getElementById("reader").classList.add("hidden");
+    document.getElementById("camera-start").classList.remove("hidden");
+  }
+}
+
+// Sons générés à la volée (Web Audio API) — pas de fichier audio externe requis, fonctionne aussi dans une WebView.
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function beep(freq, start, duration, type = "sine", gain = 0.25) {
+  const ctx = getAudioCtx();
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  g.gain.value = gain;
+  osc.connect(g);
+  g.connect(ctx.destination);
+  osc.start(ctx.currentTime + start);
+  osc.stop(ctx.currentTime + start + duration);
+}
+function playAcceptedSound() {
+  beep(880, 0, 0.12, "sine");
+  beep(1320, 0.12, 0.18, "sine");
+}
+function playRejectedSound() {
+  beep(220, 0, 0.15, "square", 0.2);
+  beep(180, 0.18, 0.22, "square", 0.2);
+}
+
+function showResultModal(html, accepted) {
+  document.getElementById("result-modal-content").innerHTML = html;
+  document.getElementById("result-modal").classList.remove("hidden");
+  try {
+    if (accepted) playAcceptedSound(); else playRejectedSound();
+  } catch (e) { /* audio non disponible, on ignore */ }
+}
+
+async function confirmEntry(logId, btn) {
+  btn.disabled = true;
+  btn.textContent = "Enregistrement...";
+  const { error } = await supabaseClient
+    .from("scan_logs")
+    .update({ entry_confirmed: true, entry_confirmed_at: new Date().toISOString() })
+    .eq("id", logId);
+  if (error) {
+    btn.disabled = false;
+    btn.textContent = "Erreur, réessayer";
+    return;
+  }
+  btn.textContent = "✓ Entrée confirmée";
+  loadLogs();
+}
+
+document.getElementById("close-result-modal-btn").addEventListener("click", () => {
+  document.getElementById("result-modal").classList.add("hidden");
+});
+
+async function verifyCard(cardUid) {
+  return verifyIdentifier({ card_uid: cardUid.trim() });
+}
+
+async function verifyBadge(badgeUid) {
+  return verifyIdentifier({ badge_uid: badgeUid.trim() });
+}
+
+async function verifyIdentifier(payload) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/verify-card`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${currentSession.access_token}`,
+        "apikey": SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      showResultModal(`<p class="msg error">${data.error || "Carte introuvable"}</p>`, false);
+      loadLogs();
+      return;
+    }
+
+    const labelMap = {
+      verified: "✓ Identité vérifiée",
+      underage: `⚠ Sous le seuil (${data.min_age} ans requis)`,
+      not_verified: "⏳ Compte non encore vérifié",
+      expired: "✗ Document expiré — à rescanner",
+      blocked: "⛔ Compte bloqué",
+    };
+    const accepted = data.result === "verified";
+    const entryBtn = accepted && data.scan_log_id
+      ? `<div class="submit-row"><button class="btn" id="confirm-entry-btn">Confirmer que la personne est entrée</button></div>`
+      : "";
+    const blockReasonLine = data.result === "blocked" && data.block_reason
+      ? `<div class="sub" style="color:var(--red-error)">Motif : ${data.block_reason}</div>`
+      : "";
+    showResultModal(`
+      <div class="id-card">
+        <div class="id-header">
+          <div class="brand">amalgam<span>G3</span></div>
+          <div class="status-badge ${accepted ? 'verified' : 'pending'}" style="padding:4px 10px;font-size:0.75rem">${labelMap[data.result] || data.result}</div>
+        </div>
+        <div class="id-body">
+          <img class="id-photo" src="${data.photo_url || ''}" alt="photo">
+          <div class="id-info">
+            <div class="name">${data.full_name}</div>
+            <div class="sub">Âge : ${data.age} ans ${data.meets_threshold ? `(≥ ${data.min_age} ans)` : `(< ${data.min_age} ans)`}</div>
+            ${blockReasonLine}
+          </div>
+        </div>
+      </div>
+      ${entryBtn}`, accepted);
+
+    if (accepted && data.scan_log_id) {
+      document.getElementById("confirm-entry-btn").addEventListener("click", (e) => {
+        confirmEntry(data.scan_log_id, e.target);
+      });
+    }
+    loadLogs();
+  } catch (err) {
+    showResultModal(`<p class="msg error">${err.message || err}</p>`, false);
+  }
+}
+
+document.getElementById("manual-btn").addEventListener("click", () => {
+  getAudioCtx();
+  const uid = document.getElementById("manual-uid").value.trim();
+  if (uid) verifyCard(uid);
+});
+
+// Lecteur RFID USB : se comporte comme un clavier (frappe rapide + Entrée). On écoute juste l'Entrée.
+const rfidInput = document.getElementById("rfid-input");
+rfidInput.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  getAudioCtx();
+  const value = rfidInput.value.trim();
+  rfidInput.value = "";
+  if (value) verifyBadge(value);
+});
+
+// NFC : deux chemins possibles.
+//  - Android + Chrome : Web NFC natif au navigateur (NDEFReader).
+//  - App iOS (WebView native) : pas de Web NFC dans WebKit, donc pont vers du code Swift/Core NFC
+//    injecté par l'app via window.webkit.messageHandlers.nfcBridge. Voir README pour le contrat exact.
+const hasWebNfc = "NDEFReader" in window;
+const hasNativeNfcBridge = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nfcBridge);
+const nfcBtn = document.getElementById("nfc-btn");
+
+if (hasWebNfc || hasNativeNfcBridge) {
+  document.getElementById("nfc-section").classList.remove("hidden");
+}
+
+function resetNfcBtn() {
+  nfcBtn.textContent = "Badger via NFC (téléphone)";
+  nfcBtn.disabled = false;
+}
+
+if (hasNativeNfcBridge) {
+  // Appelées par le code natif Swift une fois le scan terminé (succès ou échec).
+  window.onNativeNfcResult = function (uid) {
+    resetNfcBtn();
+    if (uid) verifyBadge(uid);
+  };
+  window.onNativeNfcError = function (message) {
+    resetNfcBtn();
+    if (message) alert("NFC : " + message);
+  };
+
+  nfcBtn.addEventListener("click", () => {
+    getAudioCtx();
+    nfcBtn.textContent = "En attente du badge…";
+    nfcBtn.disabled = true;
+    window.webkit.messageHandlers.nfcBridge.postMessage({});
+  });
+} else if (hasWebNfc) {
+  nfcBtn.addEventListener("click", async () => {
+    getAudioCtx();
+    try {
+      const ndef = new NDEFReader();
+      await ndef.scan();
+      nfcBtn.textContent = "En attente du badge…";
+      nfcBtn.disabled = true;
+      ndef.onreading = (event) => {
+        resetNfcBtn();
+        if (event.serialNumber) verifyBadge(event.serialNumber.replace(/:/g, "").toUpperCase());
+      };
+      ndef.onreadingerror = () => { resetNfcBtn(); };
+    } catch (e) {
+      alert("NFC indisponible : " + e.message);
+      resetNfcBtn();
+    }
+  });
+}
+
+async function loadLogs() {
+  const { data: logs } = await supabaseClient
+    .from("scan_logs")
+    .select("result, scanned_at, entry_confirmed")
+    .eq("scanned_by", currentUser.id)
+    .order("scanned_at", { ascending: false })
+    .limit(20);
+
+  const tbody = document.querySelector("#log-table tbody");
+  tbody.innerHTML = "";
+  if (!logs || logs.length === 0) {
+    document.getElementById("no-logs").classList.remove("hidden");
+    return;
+  }
+  document.getElementById("no-logs").classList.add("hidden");
+  for (const log of logs) {
+    const tr = document.createElement("tr");
+    const date = new Date(log.scanned_at).toLocaleString("fr-FR");
+    tr.innerHTML = `<td>${date}</td><td>${log.result}</td><td>${log.entry_confirmed ? "✓" : "—"}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+document.getElementById("logout-btn").addEventListener("click", async () => {
+  await supabaseClient.auth.signOut();
+  window.location.href = "index.html";
+});
+
+init();
+</script>
+
+</body>
+</html>

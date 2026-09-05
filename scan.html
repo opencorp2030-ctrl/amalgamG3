@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scan du document — amalgamG3</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="assets/img/favicon-32.png?v=1787907977" type="image/png" sizes="32x32">
+<link rel="icon" href="assets/img/favicon-16.png?v=1787907977" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=1787907977">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css?v=1787907977">
+<style>
+  .step-indicator { display:flex; gap:8px; margin-bottom:24px; }
+  .step-indicator .dot { flex:1; height:4px; background:var(--grey-border); }
+  .step-indicator .dot.active, .step-indicator .dot.done { background:var(--blue-france); }
+  video, canvas.preview { width:100%; background:#000; display:block; border:1px solid var(--grey-text); }
+  .frame-guide { position:relative; }
+  .frame-guide::after {
+    content:""; position:absolute; left:6%; right:6%; bottom:8%; height:22%;
+    border:2px dashed var(--blue-france); pointer-events:none;
+  }
+  .frame-guide-full { position:relative; }
+  .frame-guide-full::after {
+    content:""; position:absolute; left:4%; right:4%; top:4%; bottom:4%;
+    border:2px dashed var(--blue-france); pointer-events:none;
+  }
+  .confirm-check {
+    display:flex; gap:10px; align-items:flex-start; margin-top:18px; padding:14px;
+    background:var(--grey-bg-alt); border:1px solid var(--grey-border);
+  }
+  .confirm-check input { width:auto; margin-top:3px; }
+  .confirm-check label { margin:0; font-weight:400; color:var(--grey-text); font-size:0.88rem; }
+  .review-row { display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--grey-border); font-size:0.9rem; }
+  .review-row .k { color:var(--grey-text-mention); }
+  .review-photos { display:flex; gap:10px; margin:14px 0; flex-wrap:wrap; }
+  .review-photos img { width:31%; min-width:90px; flex:1; border:1px solid var(--grey-text); object-fit:cover; height:120px; }
+  .doctype-choice { display:flex; flex-direction:column; gap:12px; }
+  .doctype-btn {
+    display:block; width:100%; text-align:left; padding:18px; border:1px solid var(--grey-text);
+    background:var(--white); cursor:pointer; font-family:inherit;
+  }
+  .doctype-btn strong { display:block; font-size:1rem; margin-bottom:4px; }
+  .doctype-btn span { color:var(--grey-text-mention); font-size:0.85rem; }
+  .doctype-btn:hover { background:var(--grey-bg-alt); border-color:var(--blue-france); }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="logo">amalgam<span>G3</span><span class="baseline">Scan de document sur mobile</span></div>
+</div>
+
+<div class="container" style="max-width:480px">
+  <div class="step-indicator">
+    <div class="dot" id="dot-1"></div>
+    <div class="dot" id="dot-2"></div>
+    <div class="dot" id="dot-3"></div>
+    <div class="dot" id="dot-4"></div>
+    <div class="dot" id="dot-5"></div>
+  </div>
+
+  <div id="state-loading" class="panel"><p>Vérification de la session…</p></div>
+
+  <div id="state-invalid" class="panel hidden">
+    <h3>Session invalide ou expirée</h3>
+    <p class="wallet-note">Retourne sur ton ordinateur et régénère un nouveau QR code.</p>
+  </div>
+
+  <!-- 0. Choix du type de document -->
+  <div id="step-doctype" class="panel hidden">
+    <h3>Quel document veux-tu scanner ?</h3>
+    <p class="wallet-note" style="text-align:left;margin-top:0">Le scan est plus précis quand on sait à l'avance quel format chercher.</p>
+    <div class="doctype-choice">
+      <button class="doctype-btn" id="choose-passport-btn">
+        <strong>📘 Passeport</strong>
+        <span>Une seule photo — la page avec ta photo et le texte en bas.</span>
+      </button>
+      <button class="doctype-btn" id="choose-idcard-btn">
+        <strong>🪪 Carte d'identité</strong>
+        <span>Deux photos — recto puis verso. La bande de texte à lire se trouve uniquement au verso.</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 1. Capture document (recto, ou passeport seul) -->
+  <div id="step-doc" class="panel hidden">
+    <h3 id="doc-step-title">Document</h3>
+    <p id="doc-step-sub" class="wallet-note">Cadre le document entier dans le repère pointillé, bien à plat et net.</p>
+    <div id="doc-frame-wrap" class="frame-guide"><video id="video-doc" autoplay playsinline muted></video></div>
+    <canvas id="canvas-doc" class="hidden"></canvas>
+    <div class="submit-row"><button class="btn" id="capture-doc-btn">Capturer</button></div>
+    <div id="ocr-status" class="wallet-note hidden">Lecture en cours…</div>
+
+    <div id="mrz-result" class="hidden">
+      <div id="mrz-msg" class="msg hidden"></div>
+      <p class="wallet-note" style="text-align:left">Informations lues automatiquement sur ton document — non modifiables, pour garantir leur fiabilité.</p>
+      <div id="mrz-fields"></div>
+
+      <div class="submit-row"><button class="btn" id="confirm-mrz-btn" disabled>Continuer</button></div>
+      <div class="link-row"><a href="#" id="retry-doc-link">Reprendre la photo</a></div>
+    </div>
+  </div>
+
+  <!-- 1b. Capture verso (carte d'identité uniquement) -->
+  <div id="step-doc-back" class="panel hidden">
+    <h3>Verso de la carte d'identité</h3>
+    <p class="wallet-note">Retourne la carte et cadre le verso entier — c'est généralement là que se trouve la bande de texte à lire.</p>
+    <div class="frame-guide"><video id="video-doc-back" autoplay playsinline muted></video></div>
+    <canvas id="canvas-doc-back" class="hidden"></canvas>
+    <div class="submit-row"><button class="btn" id="capture-doc-back-btn">Capturer</button></div>
+  </div>
+
+  <div id="step-selfie" class="panel hidden">
+    <h3 id="selfie-step-num">2. Selfie (vérification de vivacité)</h3>
+    <p id="liveness-instruction" class="wallet-note" style="text-align:left;margin-top:0">Chargement de la vérification…</p>
+    <div id="liveness-live">
+      <video id="video-selfie" autoplay playsinline muted></video>
+      <canvas id="canvas-selfie" class="hidden"></canvas>
+      <div class="submit-row"><button class="btn" id="liveness-step-btn" disabled>Chargement…</button></div>
+      <p id="liveness-status" class="wallet-note"></p>
+      <div class="link-row"><a href="#" id="liveness-restart-link">Recommencer</a></div>
+    </div>
+    <div id="selfie-preview" class="hidden">
+      <img id="selfie-img" style="width:100%;border:1px solid var(--grey-text)">
+      <div class="submit-row"><button class="btn" id="to-review-btn">Continuer</button></div>
+      <div class="link-row"><a href="#" id="retry-selfie-link">Reprendre</a></div>
+    </div>
+  </div>
+
+  <div id="step-review" class="panel hidden">
+    <h3 id="review-step-num">3. Relecture finale</h3>
+    <p class="wallet-note" style="text-align:left">Dernière vérification avant l'envoi — ces informations et ces photos seront transmises pour validation.</p>
+
+    <div class="review-photos" id="review-photos"></div>
+    <div id="review-fields"></div>
+
+    <div class="confirm-check">
+      <input type="checkbox" id="confirm-final-checkbox">
+      <label for="confirm-final-checkbox">Je confirme vouloir envoyer ces photos et ces informations, lues automatiquement sur mon document, pour validation.</label>
+    </div>
+
+    <div class="submit-row"><button class="btn" id="submit-btn" disabled>Envoyer</button></div>
+    <div class="link-row"><a href="#" id="back-to-doc-link">Recommencer depuis le début</a></div>
+    <div id="submit-msg" class="msg hidden"></div>
+  </div>
+
+  <div id="step-done" class="panel hidden">
+    <h3>Scan terminé</h3>
+    <p class="wallet-note">Les informations ont été envoyées. Tu peux retourner sur ton ordinateur — la page s'est mise à jour automatiquement. Vous pouvez fermer cet onglet.</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/dist/face-api.js"></script>
+<script src="assets/js/mrz.js?v=1787907977"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const sessionId = params.get("session");
+const SUPABASE_URL_LOCAL = "https://pnqaczmsyfzosxuyhcmn.supabase.co";
+const SUPABASE_ANON_KEY_LOCAL = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBucWFjem1zeWZ6b3N4dXloY21uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4OTk0ODgsImV4cCI6MjEwMzQ3NTQ4OH0.N_5nWHZLHd7JQjxc0FAwevlk5RUTOmTkfT4eUFiejrk";
+
+const MRZ_FIELDS = [
+  { key: "full_name", label: "Nom complet" },
+  { key: "nationality", label: "Nationalité" },
+  { key: "date_of_birth", label: "Date de naissance" },
+  { key: "document_number", label: "N° de document" },
+  { key: "expiry_date", label: "Date d'expiration" },
+];
+
+let documentType = null; // "passport" | "id_card"
+let extractedMrz = null;
+let docPhotoBase64 = null;      // recto (ou page unique du passeport)
+let docPhotoBackBase64 = null;  // verso (carte d'identité uniquement)
+let selfieBase64 = null;
+let selfieDescriptor = null; // 128 nombres (face-api.js) — permet la correspondance faciale et la détection de doublons côté serveur
+
+const STATES = ["state-loading", "state-invalid", "step-doctype", "step-doc", "step-doc-back", "step-selfie", "step-review", "step-done"];
+function show(id) {
+  STATES.forEach(x => document.getElementById(x).classList.toggle("hidden", x !== id));
+}
+function setDots(n) {
+  for (let i = 1; i <= 5; i++) {
+    const d = document.getElementById("dot-" + i);
+    d.classList.toggle("active", i === n);
+    d.classList.toggle("done", i < n);
+  }
+}
+
+async function callFn(name, payload) {
+  const res = await fetch(`${SUPABASE_URL_LOCAL}/functions/v1/${name}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY_LOCAL },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+function drawVideoToCanvas(video, canvas, maxDim) {
+  const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
+  canvas.width = video.videoWidth * scale;
+  canvas.height = video.videoHeight * scale;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.8);
+}
+
+async function startCamera(videoEl, facingMode) {
+  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: false });
+  videoEl.srcObject = stream;
+  return stream;
+}
+
+function stopVideo(videoEl) {
+  videoEl.srcObject?.getTracks().forEach(t => t.stop());
+}
+
+async function init() {
+  if (!sessionId) { show("state-invalid"); return; }
+  const { ok, data } = await callFn("pairing-status", { session_id: sessionId });
+  if (!ok || !data.valid) { show("state-invalid"); return; }
+
+  setDots(1);
+  show("step-doctype");
+}
+
+function setDocFrameGuide(kind) {
+  const wrap = document.getElementById("doc-frame-wrap");
+  wrap.classList.remove("frame-guide", "frame-guide-full");
+  wrap.classList.add(kind === "band" ? "frame-guide" : "frame-guide-full");
+}
+
+document.getElementById("choose-passport-btn").addEventListener("click", async () => {
+  documentType = "passport";
+  document.getElementById("doc-step-title").textContent = "1. Passeport";
+  document.getElementById("doc-step-sub").textContent = "Cadre la page entière dans le repère pointillé : ta photo en haut, la bande de texte à lire en bas.";
+  document.getElementById("doc-frame-wrap").classList.remove("hidden");
+  setDocFrameGuide("band");
+  setDots(2);
+  show("step-doc");
+  try { await startCamera(document.getElementById("video-doc"), "environment"); }
+  catch (e) { alert("Caméra indisponible : " + e.message); }
+});
+
+document.getElementById("choose-idcard-btn").addEventListener("click", async () => {
+  documentType = "id_card";
+  document.getElementById("doc-step-title").textContent = "1. Carte d'identité — recto";
+  document.getElementById("doc-step-sub").textContent = "Cadre la carte entière dans le repère pointillé. Le recto n'a pas de bande de texte à lire — c'est simplement une photo, elle sera lue au verso.";
+  document.getElementById("doc-frame-wrap").classList.remove("hidden");
+  setDocFrameGuide("full");
+  setDots(2);
+  show("step-doc");
+  try { await startCamera(document.getElementById("video-doc"), "environment"); }
+  catch (e) { alert("Caméra indisponible : " + e.message); }
+});
+
+document.getElementById("capture-doc-btn").addEventListener("click", async () => {
+  const video = document.getElementById("video-doc");
+  const canvas = document.getElementById("canvas-doc");
+  docPhotoBase64 = drawVideoToCanvas(video, canvas, 1600);
+
+  if (documentType === "id_card") {
+    // Le verso est capturé ensuite — c'est là que la lecture automatique se fera.
+    stopVideo(video);
+    setDots(3);
+    show("step-doc-back");
+    try { await startCamera(document.getElementById("video-doc-back"), "environment"); }
+    catch (e) { alert("Caméra indisponible : " + e.message); }
+    return;
+  }
+
+  await runOcrOn(docPhotoBase64);
+});
+
+document.getElementById("capture-doc-back-btn").addEventListener("click", async () => {
+  const video = document.getElementById("video-doc-back");
+  const canvas = document.getElementById("canvas-doc-back");
+  docPhotoBackBase64 = drawVideoToCanvas(video, canvas, 1600);
+  stopVideo(video);
+  // On ré-utilise le panneau "step-doc" pour afficher le résultat de lecture, mais c'est bien
+  // le verso qui vient d'être scanné et lu — le titre et le cadre caméra (propres au recto) sont masqués.
+  document.getElementById("doc-step-title").textContent = "2. Carte d'identité — vérification du verso";
+  document.getElementById("doc-step-sub").textContent = "Voici les informations lues sur la bande de texte du verso — vérifie et corrige si besoin.";
+  show("step-doc");
+  await runOcrOn(docPhotoBackBase64);
+});
+
+async function runOcrOn(imageBase64) {
+  stopVideo(document.getElementById("video-doc"));
+
+  document.getElementById("doc-frame-wrap").classList.add("hidden");
+
+  const ocrStatus = document.getElementById("ocr-status");
+  ocrStatus.classList.remove("hidden");
+  ocrStatus.textContent = "Lecture du texte en cours (quelques secondes)…";
+  document.getElementById("capture-doc-btn").parentElement.classList.add("hidden");
+
+  document.getElementById("confirm-mrz-btn").disabled = true;
+
+  try {
+    // Modèle Tesseract entraîné spécifiquement sur la police OCR-B et le jeu de 37 caractères de la MRZ
+    // (bien plus fiable que le modèle anglais générique pour ce type de texte) — gratuit, hébergé sur jsDelivr.
+    const { data: { text } } = await Tesseract.recognize(imageBase64, "mrz", {
+      langPath: "https://cdn.jsdelivr.net/gh/eringen/web-mrz-reader@main/public/model/",
+    });
+
+    // On sait déjà quel document c'est : on ne devine pas le format, on cherche précisément
+    // celui qui correspond (TD3 pour passeport, TD1 puis TD2 pour carte d'identité) — plus fiable
+    // qu'une détection automatique à l'aveugle.
+    const candidates = text
+      .split("\n")
+      .map((l) => l.toUpperCase().replace(/[^A-Z0-9<]/g, ""))
+      .filter((l) => l.length >= 28 && (l.match(/</g) || []).length >= 2);
+
+    let parsed = null;
+    if (documentType === "passport" && candidates.length >= 2) {
+      const [l1, l2] = candidates.slice(-2);
+      parsed = parseTD3(l1, l2);
+    } else if (documentType === "id_card") {
+      if (candidates.length >= 3) {
+        const [l1, l2, l3] = candidates.slice(-3);
+        parsed = parseTD1(l1, l2, l3);
+      }
+      if (!parsed && candidates.length >= 2) {
+        const [l1, l2] = candidates.slice(-2);
+        parsed = parseTD2(l1, l2);
+      }
+    }
+
+    ocrStatus.classList.add("hidden");
+
+    const msg = document.getElementById("mrz-msg");
+    const confirmBtn = document.getElementById("confirm-mrz-btn");
+
+    // Aucune saisie manuelle possible : soit la lecture automatique est fiable (clés de contrôle
+    // valides) et on peut continuer, soit non et la seule option est de reprendre la photo.
+    // Laisser l'utilisateur corriger les champs lui-même viderait la vérification de son sens.
+    if (parsed && parsed.checksum_valid) {
+      extractedMrz = parsed;
+      msg.className = "msg ok";
+      msg.textContent = "Document lu et vérifié automatiquement (clés de contrôle valides).";
+      msg.classList.remove("hidden");
+      renderMrzRecap();
+      confirmBtn.disabled = false;
+      confirmBtn.classList.remove("hidden");
+    } else {
+      extractedMrz = null;
+      msg.className = "msg error";
+      msg.textContent = parsed
+        ? "Lecture faite mais les clés de contrôle ne correspondent pas à un document valide. Reprends la photo : bien à plat, bien éclairée, sans reflet ni flou."
+        : "Impossible de lire automatiquement la bande de texte. Reprends la photo : bien à plat, bien éclairée, sans reflet ni flou.";
+      msg.classList.remove("hidden");
+      document.getElementById("mrz-fields").innerHTML = "";
+      confirmBtn.disabled = true;
+      confirmBtn.classList.add("hidden");
+    }
+
+    document.getElementById("mrz-result").classList.remove("hidden");
+  } catch (e) {
+    ocrStatus.textContent = "Erreur de lecture : " + e.message;
+  }
+}
+
+function renderMrzRecap() {
+  const container = document.getElementById("mrz-fields");
+  container.innerHTML = MRZ_FIELDS.map(
+    (f) => `<div class="review-row"><span class="k">${f.label}</span><span>${extractedMrz[f.key] || "—"}</span></div>`
+  ).join("");
+}
+
+document.getElementById("retry-doc-link").addEventListener("click", async (e) => {
+  e.preventDefault();
+  document.getElementById("mrz-result").classList.add("hidden");
+  document.getElementById("ocr-status").classList.add("hidden");
+  document.getElementById("capture-doc-btn").parentElement.classList.remove("hidden");
+  extractedMrz = null;
+
+  if (documentType === "id_card") {
+    // On reprend directement le verso (le recto reste tel quel).
+    document.getElementById("doc-step-title").textContent = "1. Carte d'identité — verso";
+    document.getElementById("doc-step-sub").textContent = "Cadre le verso entier (avec la bande de texte) dans le repère pointillé, bien à plat et net.";
+    setDots(3);
+    show("step-doc-back");
+    try { await startCamera(document.getElementById("video-doc-back"), "environment"); } catch (e2) {}
+  } else {
+    document.getElementById("doc-frame-wrap").classList.remove("hidden");
+    try { await startCamera(document.getElementById("video-doc"), "environment"); } catch (e2) {}
+  }
+});
+
+// --- Vérification de vivacité : on suit le visage en direct et on exige un vrai mouvement
+// (tourner la tête à gauche/droite) avant de capturer — une simple photo tenue devant la caméra
+// ne peut pas reproduire ce mouvement en temps réel. La capture se déclenche automatiquement,
+// aucun bouton "capturer" manuel : impossible de forcer le passage sans avoir vraiment bougé.
+const FACEAPI_MODEL_PATH = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/model/";
+let faceApiCoreReady = false;
+let faceApiRecognitionReady = false;
+let faceApiRecognitionLoading = null;
+
+// Modèles légers (détection + repères du visage) — le modèle de reconnaissance (~6 Mo, plus lourd)
+// se charge en arrière-plan une fois la caméra démarrée, pour ne pas retarder le début.
+async function loadFaceApiCore() {
+  if (faceApiCoreReady) return;
+  await faceapi.nets.tinyFaceDetector.loadFromUri(FACEAPI_MODEL_PATH);
+  await faceapi.nets.faceLandmark68TinyNet.loadFromUri(FACEAPI_MODEL_PATH);
+  faceApiCoreReady = true;
+}
+
+function loadFaceApiRecognitionInBackground() {
+  if (faceApiRecognitionReady || faceApiRecognitionLoading) return faceApiRecognitionLoading;
+  faceApiRecognitionLoading = faceapi.nets.faceRecognitionNet.loadFromUri(FACEAPI_MODEL_PATH).then(() => {
+    faceApiRecognitionReady = true;
+  });
+  return faceApiRecognitionLoading;
+}
+
+// Position du nez par rapport aux bords du visage (contour de mâchoire) — repère stable, indépendant
+// de la boîte de détection qui se recentre elle-même à chaque image.
+function estimateYaw(landmarks) {
+  const jaw = landmarks.getJawOutline();
+  const nose = landmarks.getNose();
+  const tip = nose[nose.length - 1];
+  const leftEdge = jaw[0].x;
+  const rightEdge = jaw[jaw.length - 1].x;
+  const width = rightEdge - leftEdge;
+  if (Math.abs(width) < 1) return 0;
+  return (tip.x - leftEdge) / width - 0.5;
+}
+
+// Vivacité simplifiée en 2 clics au lieu d'un suivi caméra en continu (trop lourd sur téléphone
+// modeste) : une photo "pose neutre", puis une photo "tête tournée" — une seule analyse d'image à
+// chaque clic (rapide), pas une boucle qui tourne sans arrêt. On compare les deux pour vérifier
+// qu'un vrai mouvement a eu lieu entre les deux, ce qu'une simple photo tenue devant la caméra ne
+// peut pas reproduire.
+const TURN_THRESHOLD = 0.03;
+let livenessPhase = "idle"; // "neutral" | "turned"
+let livenessDirection = null;
+let livenessNeutralYaw = null;
+
+async function startLivenessChallenge() {
+  document.getElementById("selfie-preview").classList.add("hidden");
+  document.getElementById("liveness-live").classList.remove("hidden");
+  document.getElementById("liveness-live").querySelector("video").classList.remove("hidden");
+  document.getElementById("liveness-status").textContent = "";
+  const btn = document.getElementById("liveness-step-btn");
+  btn.disabled = true;
+  btn.textContent = "Chargement…";
+  document.getElementById("liveness-instruction").textContent = "Chargement de la vérification…";
+
+  try {
+    await loadFaceApiCore();
+    await startCamera(document.getElementById("video-selfie"), "user");
+  } catch (e) {
+    document.getElementById("liveness-instruction").textContent = "Impossible de démarrer la vérification : " + e.message;
+    return;
+  }
+  loadFaceApiRecognitionInBackground();
+
+  livenessDirection = Math.random() < 0.5 ? "left" : "right";
+  livenessNeutralYaw = null;
+  livenessPhase = "neutral";
+  document.getElementById("liveness-instruction").textContent = "Regarde la caméra bien en face, puis appuie sur le bouton.";
+  btn.textContent = "C'est bon, capturer";
+  btn.disabled = false;
+}
+
+document.getElementById("liveness-step-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("liveness-step-btn");
+  const status = document.getElementById("liveness-status");
+  btn.disabled = true;
+  status.textContent = "Analyse…";
+
+  const video = document.getElementById("video-selfie");
+  const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+  const result = await faceapi.detectSingleFace(video, options).withFaceLandmarks(true);
+
+  if (!result) {
+    status.textContent = "Visage non détecté — place-toi bien en face de la caméra, dans un endroit bien éclairé, puis réessaie.";
+    btn.disabled = false;
+    return;
+  }
+  const yaw = estimateYaw(result.landmarks);
+
+  if (livenessPhase === "neutral") {
+    livenessNeutralYaw = yaw;
+    livenessPhase = "turned";
+    const dirLabel = livenessDirection === "left" ? "GAUCHE" : "DROITE";
+    document.getElementById("liveness-instruction").textContent = `Tourne maintenant la tête vers ta ${dirLabel}, puis appuie à nouveau.`;
+    status.textContent = "";
+    btn.textContent = "J'ai tourné la tête, capturer";
+    btn.disabled = false;
+    return;
+  }
+
+  const delta = yaw - livenessNeutralYaw;
+  const turned = livenessDirection === "left" ? delta < -TURN_THRESHOLD : delta > TURN_THRESHOLD;
+  if (!turned) {
+    status.textContent = `Mouvement pas assez marqué — tourne un peu plus franchement la tête, puis réessaie (${delta.toFixed(3)}).`;
+    btn.disabled = false;
+    return;
+  }
+
+  const canvas = document.getElementById("canvas-selfie");
+  selfieBase64 = drawVideoToCanvas(video, canvas, 900);
+
+  document.getElementById("liveness-instruction").textContent = "Finalisation…";
+  status.textContent = "";
+  await loadFaceApiRecognitionInBackground();
+  const full = await faceapi.detectSingleFace(video, options).withFaceLandmarks(true).withFaceDescriptor();
+  selfieDescriptor = full ? Array.from(full.descriptor) : null;
+
+  stopVideo(video);
+  document.getElementById("liveness-live").classList.add("hidden");
+  document.getElementById("selfie-img").src = selfieBase64;
+  document.getElementById("selfie-preview").classList.remove("hidden");
+});
+
+document.getElementById("liveness-restart-link").addEventListener("click", async (e) => {
+  e.preventDefault();
+  await startLivenessChallenge();
+});
+
+document.getElementById("confirm-mrz-btn").addEventListener("click", async () => {
+  if (!extractedMrz || !extractedMrz.checksum_valid) return;
+  setDots(4);
+  document.getElementById("selfie-step-num").textContent = documentType === "id_card" ? "4. Selfie (vérification de vivacité)" : "2. Selfie (vérification de vivacité)";
+  show("step-selfie");
+  document.getElementById("liveness-live").querySelector("video").classList.remove("hidden");
+  await startLivenessChallenge();
+});
+
+document.getElementById("retry-selfie-link").addEventListener("click", async (e) => {
+  e.preventDefault();
+  selfieBase64 = null;
+  selfieDescriptor = null;
+  await startLivenessChallenge();
+});
+
+document.getElementById("to-review-btn").addEventListener("click", () => {
+  stopVideo(document.getElementById("video-selfie"));
+  setDots(5);
+  document.getElementById("review-step-num").textContent = documentType === "id_card" ? "5. Relecture finale" : "3. Relecture finale";
+  show("step-review");
+
+  const photos = document.getElementById("review-photos");
+  photos.innerHTML = `<img src="${docPhotoBase64}" alt="document recto">`;
+  if (docPhotoBackBase64) photos.innerHTML += `<img src="${docPhotoBackBase64}" alt="document verso">`;
+  photos.innerHTML += `<img src="${selfieBase64}" alt="selfie">`;
+
+  const reviewFields = document.getElementById("review-fields");
+  reviewFields.innerHTML = MRZ_FIELDS.map(
+    (f) => `<div class="review-row"><span class="k">${f.label}</span><span>${extractedMrz[f.key] || "—"}</span></div>`
+  ).join("");
+
+  document.getElementById("confirm-final-checkbox").checked = false;
+  document.getElementById("submit-btn").disabled = true;
+});
+
+document.getElementById("confirm-final-checkbox").addEventListener("change", (e) => {
+  document.getElementById("submit-btn").disabled = !e.target.checked;
+});
+
+document.getElementById("back-to-doc-link").addEventListener("click", async (e) => {
+  e.preventDefault();
+  documentType = null;
+  extractedMrz = null;
+  docPhotoBase64 = null;
+  docPhotoBackBase64 = null;
+  selfieBase64 = null;
+  document.getElementById("mrz-result").classList.add("hidden");
+  document.getElementById("ocr-status").classList.add("hidden");
+  document.getElementById("capture-doc-btn").parentElement.classList.remove("hidden");
+  document.getElementById("selfie-preview").classList.add("hidden");
+  setDots(1);
+  show("step-doctype");
+});
+
+document.getElementById("submit-btn").addEventListener("click", async () => {
+  const msg = document.getElementById("submit-msg");
+  msg.className = "msg"; msg.textContent = "Envoi en cours…"; msg.classList.remove("hidden");
+
+  const { ok, data } = await callFn("pairing-submit", {
+    session_id: sessionId,
+    mrz: extractedMrz,
+    document_type: documentType,
+    doc_photo_base64: docPhotoBase64,
+    doc_photo_back_base64: docPhotoBackBase64 || undefined,
+    selfie_base64: selfieBase64,
+    selfie_descriptor: selfieDescriptor || undefined,
+  });
+
+  if (!ok) {
+    msg.className = "msg error";
+    msg.textContent = data.error || "Erreur lors de l'envoi.";
+    return;
+  }
+
+  setDots(5);
+  show("step-done");
+});
+
+init();
+</script>
+
+</body>
+</html>

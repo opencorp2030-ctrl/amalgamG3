@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vérification manuelle — amalgamG3</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="assets/img/favicon-32.png?v=1787907977" type="image/png" sizes="32x32">
+<link rel="icon" href="assets/img/favicon-16.png?v=1787907977" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=1787907977">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css?v=1787907977">
+</head>
+<body>
+
+<div class="nav">
+  <div class="logo"><a href="index.html" style="color:inherit;text-decoration:none">amalgam<span>G3</span><span class="baseline">Identification &amp; vérification en commerce</span></a></div>
+  <div class="nav-actions"><button class="btn ghost" id="logout-btn">Déconnexion</button></div>
+</div>
+
+<div class="container">
+  <div class="panel">
+    <h3>Vue d'ensemble</h3>
+    <div id="stats-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-top:12px">
+      <div class="panel"><div class="wallet-note" style="margin-top:0">Particuliers</div><div id="stat-users" style="font-size:1.6rem;font-weight:700">—</div></div>
+      <div class="panel"><div class="wallet-note" style="margin-top:0">Vérifiés</div><div id="stat-verified" style="font-size:1.6rem;font-weight:700;color:var(--green-success)">—</div></div>
+      <div class="panel"><div class="wallet-note" style="margin-top:0">Bloqués</div><div id="stat-blocked" style="font-size:1.6rem;font-weight:700;color:var(--red-error)">—</div></div>
+      <div class="panel"><div class="wallet-note" style="margin-top:0">Commerces</div><div id="stat-merchants" style="font-size:1.6rem;font-weight:700">—</div></div>
+      <div class="panel"><div class="wallet-note" style="margin-top:0">Scans (7j)</div><div id="stat-scans" style="font-size:1.6rem;font-weight:700">—</div></div>
+      <div class="panel"><div class="wallet-note" style="margin-top:0">Vérifs widget (7j)</div><div id="stat-widget" style="font-size:1.6rem;font-weight:700">—</div></div>
+      <div class="panel"><div class="wallet-note" style="margin-top:0">Cartes Wallet créées (total)</div><div id="stat-wallet" style="font-size:1.6rem;font-weight:700">—</div></div>
+    </div>
+    <p class="wallet-note" style="text-align:left">Le compteur "Cartes Wallet créées" est cumulatif (depuis le début), pas le quota mensuel exact de WalletWallet (1000/mois sur le plan gratuit) — vérifie ton usage réel sur leur tableau de bord pour un chiffre précis.</p>
+    <p id="wallet-quota-warning" class="msg error hidden" style="margin-top:14px">Ce total dépasse 800 — pense à vérifier ton usage mensuel réel sur WalletWallet, tu approches peut-être de la limite du plan gratuit (1000/mois).</p>
+  </div>
+
+  <div class="panel" style="margin-top:1px">
+    <h3>Comptes en attente de vérification</h3>
+    <div id="pending-list"></div>
+    <p id="empty-msg" class="wallet-note hidden">Aucun compte en attente.</p>
+  </div>
+
+  <div class="panel" style="margin-top:1px">
+    <h3>Associer une carte / badge RFID</h3>
+    <p class="wallet-note" style="text-align:left;margin-top:0">
+      Recherche un compte particulier, puis branche le lecteur RFID USB (il se comporte comme un clavier) et scanne le badge — l'identifiant est capturé automatiquement.
+    </p>
+    <label for="badge-search-input">Rechercher par nom</label>
+    <input id="badge-search-input" type="text" placeholder="ex: Arthur Ellies">
+    <div class="submit-row" style="max-width:160px"><button class="btn" id="badge-search-btn">Rechercher</button></div>
+    <p class="wallet-note" style="text-align:left">Cette recherche permet aussi de bloquer/débloquer un compte (voir le bouton rouge sur chaque résultat).</p>
+    <div id="badge-search-results" style="margin-top:16px"></div>
+  </div>
+
+  <div class="panel" style="margin-top:1px">
+    <h3>Personnaliser la carte Wallet</h3>
+    <p class="wallet-note" style="text-align:left;margin-top:0">Ces réglages s'appliquent à toutes les cartes Apple/Google Wallet (texte, couleurs par statut). Les changements sont utilisés au prochain envoi/mise à jour de carte.</p>
+
+    <label for="wcs-logo-text">Texte à côté du logo</label>
+    <input id="wcs-logo-text" type="text">
+    <label for="wcs-org-name">Nom de l'organisation</label>
+    <input id="wcs-org-name" type="text">
+
+    <label for="wcs-color-active">Couleur — statut vérifié</label>
+    <select id="wcs-color-active">
+      <option value="blue">Bleu</option><option value="green">Vert</option><option value="dark">Sombre</option>
+      <option value="purple">Violet</option><option value="orange">Orange</option><option value="red">Rouge</option>
+    </select>
+    <label for="wcs-color-pending">Couleur — en attente</label>
+    <select id="wcs-color-pending">
+      <option value="blue">Bleu</option><option value="green">Vert</option><option value="dark">Sombre</option>
+      <option value="purple">Violet</option><option value="orange">Orange</option><option value="red">Rouge</option>
+    </select>
+    <label for="wcs-color-blocked">Couleur — bloqué</label>
+    <select id="wcs-color-blocked">
+      <option value="red">Rouge</option><option value="dark">Sombre</option><option value="orange">Orange</option>
+      <option value="blue">Bleu</option><option value="green">Vert</option><option value="purple">Violet</option>
+    </select>
+
+    <label for="wcs-label-verified">Texte affiché — vérifié</label>
+    <input id="wcs-label-verified" type="text">
+    <label for="wcs-label-pending">Texte affiché — en attente</label>
+    <input id="wcs-label-pending" type="text">
+    <label for="wcs-message-verified">Message de notification — vérifié</label>
+    <input id="wcs-message-verified" type="text">
+    <label for="wcs-message-blocked">Préfixe du message — bloqué (suivi automatiquement du motif)</label>
+    <input id="wcs-message-blocked" type="text">
+
+    <div class="submit-row" style="max-width:240px"><button class="btn" id="wcs-save-btn">Enregistrer</button></div>
+    <div id="wcs-msg" class="msg hidden"></div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-inner">
+    <div>amalgamG3 — Système d'identification pour commerces.<br>Service privé, non affilié à une administration ou un service public.</div>
+    <div class="footer-links">
+      <a href="index.html">Accueil</a>
+      <a href="legal.html#accessibilite">Accessibilité</a>
+      <a href="legal.html#mentions">Mentions légales</a>
+      <a href="legal.html#confidentialite">Confidentialité</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/dist/face-api.js"></script>
+<script src="assets/js/config.js?v=1787907977"></script>
+<script>
+let adminUser = null;
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href = "login.html"; return; }
+  adminUser = session.user;
+
+  const { data: profile } = await supabaseClient
+    .from("profiles")
+    .select("role")
+    .eq("id", adminUser.id)
+    .single();
+
+  if (!profile || profile.role !== "admin") { window.location.href = "dashboard.html"; return; }
+
+  loadPending();
+  loadWalletCardSettings();
+  loadStats();
+}
+
+async function loadWalletCardSettings() {
+  const { data: s, error } = await supabaseClient.from("wallet_card_settings").select("*").eq("id", true).maybeSingle();
+  if (error || !s) return;
+  document.getElementById("wcs-logo-text").value = s.logo_text;
+  document.getElementById("wcs-org-name").value = s.organization_name;
+  document.getElementById("wcs-color-active").value = s.color_active;
+  document.getElementById("wcs-color-pending").value = s.color_pending;
+  document.getElementById("wcs-color-blocked").value = s.color_blocked;
+  document.getElementById("wcs-label-verified").value = s.label_verified;
+  document.getElementById("wcs-label-pending").value = s.label_pending;
+  document.getElementById("wcs-message-verified").value = s.message_verified;
+  document.getElementById("wcs-message-blocked").value = s.message_blocked_prefix;
+}
+
+document.getElementById("wcs-save-btn").addEventListener("click", async () => {
+  const msg = document.getElementById("wcs-msg");
+  const { error } = await supabaseClient.from("wallet_card_settings").update({
+    logo_text: document.getElementById("wcs-logo-text").value.trim() || "amalgamG3",
+    organization_name: document.getElementById("wcs-org-name").value.trim() || "amalgamG3",
+    color_active: document.getElementById("wcs-color-active").value,
+    color_pending: document.getElementById("wcs-color-pending").value,
+    color_blocked: document.getElementById("wcs-color-blocked").value,
+    label_verified: document.getElementById("wcs-label-verified").value.trim() || "✓ Vérifié",
+    label_pending: document.getElementById("wcs-label-pending").value.trim() || "En attente",
+    message_verified: document.getElementById("wcs-message-verified").value.trim() || "Ton identité amalgamG3 est vérifiée ✓",
+    message_blocked_prefix: document.getElementById("wcs-message-blocked").value.trim() || "Compte bloqué : ",
+    updated_at: new Date().toISOString(),
+    updated_by: adminUser.id,
+  }).eq("id", true);
+
+  msg.className = error ? "msg error" : "msg ok";
+  msg.textContent = error ? error.message : "Paramètres enregistrés. Les cartes déjà émises se mettront à jour à leur prochaine synchronisation.";
+  msg.classList.remove("hidden");
+});
+
+async function loadStats() {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const [users, verified, blocked, merchants, scans, widgetVerifs, walletCards] = await Promise.all([
+    supabaseClient.from("profiles").select("id", { count: "exact", head: true }).eq("role", "user"),
+    supabaseClient.from("profiles").select("id", { count: "exact", head: true }).eq("role", "user").eq("verified", true),
+    supabaseClient.from("profiles").select("id", { count: "exact", head: true }).eq("blocked", true),
+    supabaseClient.from("profiles").select("id", { count: "exact", head: true }).eq("role", "merchant"),
+    supabaseClient.from("scan_logs").select("id", { count: "exact", head: true }).gte("scanned_at", sevenDaysAgo),
+    supabaseClient.from("widget_verify_logs").select("id", { count: "exact", head: true }).gte("verified_at", sevenDaysAgo),
+    supabaseClient.from("profiles").select("id", { count: "exact", head: true }).not("wallet_pass_serial", "is", null),
+  ]);
+
+  document.getElementById("stat-users").textContent = users.count ?? "—";
+  document.getElementById("stat-verified").textContent = verified.count ?? "—";
+  document.getElementById("stat-blocked").textContent = blocked.count ?? "—";
+  document.getElementById("stat-merchants").textContent = merchants.count ?? "—";
+  document.getElementById("stat-scans").textContent = scans.count ?? "—";
+  document.getElementById("stat-widget").textContent = widgetVerifs.count ?? "—";
+  document.getElementById("stat-wallet").textContent = walletCards.count ?? "—";
+
+  if (typeof walletCards.count === "number" && walletCards.count >= 800) {
+    document.getElementById("wallet-quota-warning").classList.remove("hidden");
+  }
+}
+
+const FACEAPI_MODEL_PATH = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/model/";
+let faceApiReady = false;
+async function loadFaceApiModels() {
+  if (faceApiReady) return;
+  await faceapi.nets.tinyFaceDetector.loadFromUri(FACEAPI_MODEL_PATH);
+  await faceapi.nets.faceLandmark68TinyNet.loadFromUri(FACEAPI_MODEL_PATH);
+  await faceapi.nets.faceRecognitionNet.loadFromUri(FACEAPI_MODEL_PATH);
+  faceApiReady = true;
+}
+
+// Distance en dessous de laquelle deux descripteurs sont considérés comme le même visage (seuil standard face-api.js).
+const FACE_MATCH_THRESHOLD = 0.6;
+
+async function computeFaceMatchBadge(docUrl, storedDescriptor) {
+  if (!docUrl || !Array.isArray(storedDescriptor) || storedDescriptor.length !== 128) return "";
+  try {
+    await loadFaceApiModels();
+    const img = await faceapi.fetchImage(docUrl);
+    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+    const result = await faceapi.detectSingleFace(img, options).withFaceLandmarks(true).withFaceDescriptor();
+    if (!result) return `<span class="status-badge pending" style="font-size:0.7rem">Visage non détecté sur la pièce</span>`;
+    let sum = 0;
+    for (let i = 0; i < 128; i++) sum += (result.descriptor[i] - storedDescriptor[i]) ** 2;
+    const dist = Math.sqrt(sum);
+    const matched = dist < FACE_MATCH_THRESHOLD;
+    return `<span class="status-badge ${matched ? "verified" : "pending"}" style="font-size:0.7rem;${matched ? "" : "border-color:var(--red-error);color:var(--red-error)"}">${matched ? "✓ Visage correspond" : "⚠ Visage ne correspond pas"} (écart ${dist.toFixed(2)})</span>`;
+  } catch {
+    return "";
+  }
+}
+
+async function loadPending() {
+  const { data: pending, error } = await supabaseClient
+    .from("profiles")
+    .select("id, role, full_name, date_of_birth, avatar_path, id_document_path, id_document_back_path, selfie_path, mrz_data, mrz_verified, verified, face_descriptor, face_duplicate_of")
+    .eq("verified", false)
+    .order("created_at", { ascending: true });
+
+  const list = document.getElementById("pending-list");
+  list.innerHTML = "";
+
+  if (error) { list.innerHTML = `<p class="msg error">${error.message}</p>`; return; }
+  if (!pending || pending.length === 0) {
+    document.getElementById("empty-msg").classList.remove("hidden");
+    return;
+  }
+  document.getElementById("empty-msg").classList.add("hidden");
+
+  const duplicateIds = pending.map((p) => p.face_duplicate_of).filter(Boolean);
+  let duplicateNames = {};
+  if (duplicateIds.length > 0) {
+    const { data: dupProfiles } = await supabaseClient.from("profiles").select("id, full_name").in("id", duplicateIds);
+    for (const dp of dupProfiles ?? []) duplicateNames[dp.id] = dp.full_name;
+  }
+
+  for (const p of pending) {
+    const row = document.createElement("div");
+    row.className = "panel";
+    row.style.marginTop = "14px";
+
+    let avatarUrl = "";
+    let docUrl = "";
+    let docBackUrl = "";
+    let selfieUrl = "";
+    if (p.avatar_path) {
+      const { data } = await supabaseClient.storage.from("avatars").createSignedUrl(p.avatar_path, 600);
+      if (data) avatarUrl = data.signedUrl;
+    }
+    if (p.id_document_path) {
+      const { data } = await supabaseClient.storage.from("id-documents").createSignedUrl(p.id_document_path, 600);
+      if (data) docUrl = data.signedUrl;
+    }
+    if (p.id_document_back_path) {
+      const { data } = await supabaseClient.storage.from("id-documents").createSignedUrl(p.id_document_back_path, 600);
+      if (data) docBackUrl = data.signedUrl;
+    }
+    if (p.selfie_path) {
+      const { data } = await supabaseClient.storage.from("selfies").createSignedUrl(p.selfie_path, 600);
+      if (data) selfieUrl = data.signedUrl;
+    }
+
+    const mrzBadge = p.mrz_data
+      ? `<span class="status-badge ${p.mrz_verified ? "verified" : "pending"}" style="font-size:0.7rem">${p.mrz_verified ? "MRZ vérifiée" : "MRZ invalide"}</span>`
+      : "";
+    const roleBadge = `<span class="status-badge pending" style="font-size:0.7rem">${p.role}</span>`;
+    const duplicateBadge = p.face_duplicate_of
+      ? `<div style="margin-top:6px"><span class="status-badge pending" style="font-size:0.7rem;border-color:var(--red-error);color:var(--red-error)">⚠ Visage similaire à un autre compte : ${duplicateNames[p.face_duplicate_of] || p.face_duplicate_of}</span></div>`
+      : "";
+
+    row.innerHTML = `
+      <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start">
+        <img src="${avatarUrl}" title="Photo de profil" style="width:70px;height:70px;object-fit:cover;background:var(--grey-bg-alt);border:1px solid var(--grey-border)">
+        ${selfieUrl ? `<img src="${selfieUrl}" title="Selfie (comparaison faciale)" style="width:70px;height:70px;object-fit:cover;background:var(--grey-bg-alt);border:1px solid var(--grey-border)">` : ""}
+        <div style="flex:1;min-width:200px">
+          <div style="font-weight:700">${p.full_name} ${roleBadge} ${mrzBadge}</div>
+          <div class="wallet-note">Né(e) le ${p.date_of_birth}</div>
+          ${p.mrz_data ? `<div class="wallet-note">MRZ — n° ${p.mrz_data.document_number || "?"}, nationalité ${p.mrz_data.nationality || "?"}, expire le ${p.mrz_data.expiry_date || "?"}</div>` : ""}
+          <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:4px">
+            ${docUrl ? `<a href="${docUrl}" target="_blank" style="color:var(--blue-france)">Voir la pièce d'identité${docBackUrl ? " (recto)" : ""}</a>` : '<span class="wallet-note">Aucune pièce fournie</span>'}
+            ${docBackUrl ? `<a href="${docBackUrl}" target="_blank" style="color:var(--blue-france)">Voir le verso</a>` : ""}
+          </div>
+          <div id="face-match-${p.id}" style="margin-top:6px"><span class="wallet-note">Calcul de la correspondance faciale…</span></div>
+          ${duplicateBadge}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn" data-validate-id="${p.id}">Valider</button>
+          <button class="btn ghost" data-reject-id="${p.id}" style="border-color:var(--red-error);color:var(--red-error)">Refuser</button>
+        </div>
+      </div>`;
+
+    computeFaceMatchBadge(docUrl, p.face_descriptor).then((badge) => {
+      const el = document.getElementById(`face-match-${p.id}`);
+      if (el) el.innerHTML = badge || '<span class="wallet-note">Correspondance faciale non disponible</span>';
+    });
+
+    row.querySelector("button[data-validate-id]").addEventListener("click", async (e) => {
+      const id = e.target.getAttribute("data-validate-id");
+      await supabaseClient.from("profiles").update({
+        verified: true,
+        verified_at: new Date().toISOString(),
+        verified_by: adminUser.id,
+        blocked: false,
+        block_reason: null,
+      }).eq("id", id);
+      loadPending();
+    });
+
+    row.querySelector("button[data-reject-id]").addEventListener("click", async (e) => {
+      const id = e.target.getAttribute("data-reject-id");
+      const reason = prompt("Motif du refus (affiché à l'utilisateur, y compris sur sa carte Wallet) :");
+      if (reason === null) return;
+      await supabaseClient.from("profiles").update({
+        blocked: true,
+        block_reason: reason || "Pièce d'identité refusée",
+        blocked_at: new Date().toISOString(),
+        blocked_by: adminUser.id,
+      }).eq("id", id);
+      loadPending();
+    });
+
+    list.appendChild(row);
+  }
+}
+
+document.getElementById("logout-btn").addEventListener("click", async () => {
+  await supabaseClient.auth.signOut();
+  window.location.href = "index.html";
+});
+
+async function searchAccounts() {
+  const query = document.getElementById("badge-search-input").value.trim();
+  const resultsBox = document.getElementById("badge-search-results");
+  resultsBox.innerHTML = "";
+  if (!query) return;
+
+  const { data: results, error } = await supabaseClient
+    .from("profiles")
+    .select("id, full_name, role, badge_uid, blocked, block_reason")
+    .ilike("full_name", `%${query}%`)
+    .limit(10);
+
+  if (error) { resultsBox.innerHTML = `<p class="msg error">${error.message}</p>`; return; }
+  if (!results || results.length === 0) { resultsBox.innerHTML = `<p class="wallet-note">Aucun résultat.</p>`; return; }
+
+  for (const p of results) {
+    const row = document.createElement("div");
+    row.className = "panel";
+    row.style.marginTop = "10px";
+    const blockBadge = p.blocked
+      ? `<span class="status-badge pending" style="font-size:0.7rem;border-color:var(--red-error);color:var(--red-error)">Bloqué${p.block_reason ? " : " + p.block_reason : ""}</span>`
+      : "";
+    row.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div>
+          <strong>${p.full_name}</strong> <span class="status-badge pending" style="font-size:0.7rem">${p.role}</span> ${blockBadge}
+          <div class="wallet-note" id="badge-status-${p.id}">${p.badge_uid ? `Badge associé : ${p.badge_uid}` : "Aucun badge associé"}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn ghost" data-assign-id="${p.id}">Associer une carte</button>
+          <button class="btn ghost" data-toggle-block-id="${p.id}" data-currently-blocked="${p.blocked}" style="border-color:var(--red-error);color:var(--red-error)">${p.blocked ? "Débloquer" : "Bloquer"}</button>
+        </div>
+      </div>
+      <div id="badge-capture-${p.id}" class="hidden" style="margin-top:12px">
+        <label for="badge-input-${p.id}">Scanne le badge avec le lecteur RFID (ou saisis-le manuellement puis Entrée)</label>
+        <input id="badge-input-${p.id}" type="text" placeholder="En attente du scan…">
+        <p class="wallet-note" style="text-align:left">Le lecteur RFID se comporte comme un clavier : place le curseur ici puis approche le badge du lecteur.</p>
+      </div>
+    `;
+
+    row.querySelector("button[data-toggle-block-id]").addEventListener("click", async (e) => {
+      const currentlyBlocked = e.target.getAttribute("data-currently-blocked") === "true";
+      if (currentlyBlocked) {
+        await supabaseClient.from("profiles").update({ blocked: false, block_reason: null }).eq("id", p.id);
+      } else {
+        const reason = prompt("Motif du blocage (affiché à l'utilisateur, y compris sur sa carte Wallet) :");
+        if (reason === null) return;
+        await supabaseClient.from("profiles").update({
+          blocked: true,
+          block_reason: reason || "Compte bloqué par un administrateur",
+          blocked_at: new Date().toISOString(),
+          blocked_by: adminUser.id,
+        }).eq("id", p.id);
+      }
+      searchAccounts();
+    });
+
+    row.querySelector("button[data-assign-id]").addEventListener("click", () => {
+      const box = document.getElementById(`badge-capture-${p.id}`);
+      box.classList.remove("hidden");
+      const input = document.getElementById(`badge-input-${p.id}`);
+      input.value = "";
+      input.focus();
+    });
+
+    row.querySelector(`#badge-input-${p.id}`).addEventListener("keydown", async (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      const value = e.target.value.trim();
+      if (!value) return;
+
+      const { error: updateErr } = await supabaseClient
+        .from("profiles")
+        .update({ badge_uid: value })
+        .eq("id", p.id);
+
+      const statusEl = document.getElementById(`badge-status-${p.id}`);
+      if (updateErr) {
+        statusEl.textContent = updateErr.message.includes("duplicate")
+          ? "Ce badge est déjà associé à un autre compte."
+          : "Erreur : " + updateErr.message;
+      } else {
+        statusEl.textContent = `Badge associé : ${value}`;
+        document.getElementById(`badge-capture-${p.id}`).classList.add("hidden");
+      }
+    });
+
+    resultsBox.appendChild(row);
+  }
+}
+
+document.getElementById("badge-search-btn").addEventListener("click", searchAccounts);
+document.getElementById("badge-search-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); searchAccounts(); }
+});
+
+init();
+</script>
+
+</body>
+</html>

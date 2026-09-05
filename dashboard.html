@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mon espace — amalgamG3</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="assets/img/favicon-32.png?v=1787907977" type="image/png" sizes="32x32">
+<link rel="icon" href="assets/img/favicon-16.png?v=1787907977" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=1787907977">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css?v=1787907977">
+</head>
+<body>
+
+<div class="nav">
+  <div class="logo"><a href="index.html" style="color:inherit;text-decoration:none">amalgam<span>G3</span><span class="baseline">Identification &amp; vérification en commerce</span></a></div>
+  <div class="nav-actions"><button class="btn ghost" id="logout-btn">Déconnexion</button></div>
+</div>
+
+<div class="container">
+  <div class="grid-2">
+
+    <div class="panel">
+      <h3>Vérification d'identité</h3>
+      <div class="field-row" style="display:flex;gap:8px;flex-wrap:wrap">
+        <div id="status-badge" class="status-badge pending">En attente de vérification</div>
+        <div id="mrz-badge" class="status-badge pending hidden">Document scanné</div>
+      </div>
+      <p class="wallet-note" style="text-align:left;margin-top:0">Scanne ton passeport ou ta carte d'identité, plus un selfie, depuis ton mobile. Rien d'autre à importer.</p>
+
+      <div id="pairing-idle">
+        <div class="submit-row" style="max-width:280px"><button class="btn" id="start-pairing-btn">Scanner mon document</button></div>
+      </div>
+
+      <div id="pairing-active" class="hidden" style="text-align:center">
+        <div class="qr-box" style="display:inline-block;margin-top:10px"><div id="pairing-qrcode"></div></div>
+        <p id="pairing-status-text" class="wallet-note">Scanne ce QR avec l'appareil photo de ton téléphone…</p>
+      </div>
+
+      <div id="pairing-done" class="hidden">
+        <div class="msg ok">Scan reçu. En attente de validation par un administrateur.</div>
+        <div class="submit-row" style="max-width:280px"><button class="btn ghost" id="rescan-btn">Refaire le scan</button></div>
+      </div>
+
+      <div style="margin-top:28px">
+        <h3 style="margin-bottom:8px">Historique des scans</h3>
+        <table class="log-table" id="log-table">
+          <thead><tr><th>Date</th><th>Résultat</th><th>Entrée</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p id="no-logs" class="wallet-note hidden">Aucun scan pour l'instant.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Ma carte amalgamG3</h3>
+      <div class="id-card">
+        <div class="id-header">
+          <div class="brand">amalgam<span>G3</span></div>
+          <div id="card-status-mini" class="status-badge pending" style="padding:4px 10px;font-size:0.75rem">en attente</div>
+        </div>
+        <div class="id-body">
+          <img id="card-photo" class="id-photo" src="" alt="photo">
+          <div class="id-info">
+            <div class="name" id="card-name">—</div>
+            <div class="sub" id="card-email">—</div>
+          </div>
+        </div>
+        <div class="id-footer">
+          <div class="sub" id="card-uid-short">ID: —</div>
+          <div class="qr-box"><div id="qrcode"></div></div>
+        </div>
+      </div>
+
+      <div class="submit-row" style="max-width:280px;margin-top:14px">
+        <button class="btn" id="show-big-qr-btn">Afficher le QR en grand pour le scan</button>
+      </div>
+      <div class="submit-row" style="max-width:280px">
+        <button class="btn ghost" id="copy-uid-btn">Copier l'identifiant complet</button>
+      </div>
+      <p class="wallet-note">Le QR de la carte est petit (design) — utilise "Afficher en grand" pour que le commerçant puisse le scanner facilement.</p>
+
+      <div id="qr-modal" class="hidden" style="position:fixed;inset:0;background:rgba(11,31,58,0.9);z-index:50;display:flex;align-items:center;justify-content:center;padding:24px">
+        <div style="background:var(--white);padding:28px;text-align:center;max-width:340px;width:100%">
+          <div id="qrcode-big"></div>
+          <p class="wallet-note">Présente cet écran à la caméra du commerçant.</p>
+          <button class="btn ghost" id="close-big-qr-btn">Fermer</button>
+        </div>
+      </div>
+
+      <div class="wallet-row">
+        <button class="wallet-btn" data-enabled="true" id="apple-wallet-btn">🍎 Ajouter à Apple Wallet</button>
+        <button class="wallet-btn" data-enabled="true" id="google-wallet-btn">🅶 Ajouter à Google Wallet</button>
+      </div>
+      <p id="wallet-msg" class="wallet-note hidden"></p>
+    </div>
+
+  </div>
+
+  <div class="panel" style="margin-top:1px">
+    <h3>Partages d'informations</h3>
+    <p class="wallet-note" style="text-align:left;margin-top:0">Chaque fois qu'un site externe utilise un bouton "Vérifier mon âge" amalgamG3 pour vérifier ton identité, c'est enregistré ici — même si tu n'y étais présent que via ton compte, pas en boutique.</p>
+    <table class="log-table" id="share-log-table">
+      <thead><tr><th>Date</th><th>Résultat</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p id="no-share-logs" class="wallet-note hidden">Aucun partage pour l'instant.</p>
+  </div>
+
+  <div class="panel" style="margin-top:1px">
+    <h3>Paramètres du compte</h3>
+    <p class="wallet-note" style="text-align:left;margin-top:0">Supprimer ton compte efface définitivement ton profil, tes documents scannés et ton historique. Cette action est irréversible.</p>
+    <div class="submit-row" style="max-width:220px">
+      <button class="btn ghost" id="delete-account-btn" style="border-color:var(--red-error);color:var(--red-error)">Supprimer mon compte</button>
+    </div>
+    <div id="delete-account-msg" class="msg hidden"></div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-inner">
+    <div>amalgamG3 — Système d'identification pour commerces.<br>Service privé, non affilié à une administration ou un service public.</div>
+    <div class="footer-links">
+      <a href="index.html">Accueil</a>
+      <a href="legal.html#accessibilite">Accessibilité</a>
+      <a href="legal.html#mentions">Mentions légales</a>
+      <a href="legal.html#confidentialite">Confidentialité</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="assets/js/config.js?v=1787907977"></script>
+<script>
+let currentUser = null;
+let currentProfile = null;
+
+async function forceReloginWithMessage(message) {
+  console.error(message);
+  await supabaseClient.auth.signOut();
+  window.location.href = "login.html?msg=" + encodeURIComponent(message);
+}
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href = "login.html"; return; }
+  currentUser = session.user;
+
+  let { data: profile, error } = await supabaseClient
+    .from("profiles")
+    .select("*")
+    .eq("id", currentUser.id)
+    .maybeSingle();
+
+  if (error) { await forceReloginWithMessage("Erreur de session : " + error.message); return; }
+
+  if (!profile) {
+    // Filet de sécurité : le trigger de création automatique du profil a pu échouer à l'inscription.
+    const meta = currentUser.user_metadata || {};
+    const { data: created, error: createErr } = await supabaseClient
+      .from("profiles")
+      .insert({
+        id: currentUser.id,
+        role: meta.role === "merchant" ? "merchant" : "user",
+        full_name: meta.full_name || "",
+        date_of_birth: meta.date_of_birth || "2000-01-01",
+        business_name: meta.business_name || null,
+      })
+      .select()
+      .single();
+    if (createErr) {
+      // Cas typique : session locale périmée pointant vers un compte supprimé côté serveur.
+      await forceReloginWithMessage("Ta session n'est plus valide (compte supprimé ou modifié). Reconnecte-toi.");
+      return;
+    }
+    profile = created;
+  }
+
+  currentProfile = profile;
+
+  if (profile.role === "merchant") { window.location.href = "merchant.html"; return; }
+
+  renderProfile();
+  renderCard();
+  loadLogs();
+  loadShareLogs();
+}
+
+function renderProfile() {
+  const badge = document.getElementById("status-badge");
+  if (currentProfile.blocked) {
+    badge.textContent = "⛔ Compte bloqué" + (currentProfile.block_reason ? " : " + currentProfile.block_reason : "");
+    badge.className = "status-badge pending";
+    badge.style.borderColor = "var(--red-error)";
+    badge.style.color = "var(--red-error)";
+  } else if (currentProfile.verified) {
+    badge.textContent = "Vérifié ✓";
+    badge.className = "status-badge verified";
+  } else {
+    badge.textContent = "En attente de vérification manuelle";
+    badge.className = "status-badge pending";
+  }
+
+  const mrzBadge = document.getElementById("mrz-badge");
+  if (currentProfile.mrz_verified) {
+    mrzBadge.textContent = "Document scanné et vérifié ✓";
+    mrzBadge.className = "status-badge verified";
+    mrzBadge.classList.remove("hidden");
+  } else if (currentProfile.mrz_data) {
+    mrzBadge.textContent = "Document scanné (clés invalides — à revérifier)";
+    mrzBadge.className = "status-badge pending";
+    mrzBadge.classList.remove("hidden");
+  } else {
+    mrzBadge.classList.add("hidden");
+  }
+
+  if (currentProfile.selfie_path || currentProfile.id_document_path) {
+    document.getElementById("pairing-idle").classList.add("hidden");
+    document.getElementById("pairing-active").classList.add("hidden");
+    document.getElementById("pairing-done").classList.remove("hidden");
+  }
+}
+
+async function renderCard() {
+  document.getElementById("card-name").textContent = currentProfile.full_name || "—";
+  document.getElementById("card-email").textContent = currentUser.email;
+  document.getElementById("card-uid-short").textContent = "ID: " + currentProfile.card_uid.slice(0, 8).toUpperCase();
+
+  const miniBadge = document.getElementById("card-status-mini");
+  miniBadge.textContent = currentProfile.verified ? "vérifié" : "en attente";
+  miniBadge.className = "status-badge " + (currentProfile.verified ? "verified" : "pending");
+
+  if (currentProfile.avatar_path) {
+    const bucket = currentProfile.avatar_path === currentProfile.selfie_path ? "selfies" : "avatars";
+    const { data: signed } = await supabaseClient.storage
+      .from(bucket)
+      .createSignedUrl(currentProfile.avatar_path, 3600);
+    if (signed) document.getElementById("card-photo").src = signed.signedUrl;
+  }
+
+  document.getElementById("qrcode").innerHTML = "";
+  new QRCode(document.getElementById("qrcode"), {
+    text: currentProfile.card_uid,
+    width: 84,
+    height: 84,
+  });
+}
+
+document.getElementById("show-big-qr-btn").addEventListener("click", () => {
+  const box = document.getElementById("qrcode-big");
+  box.innerHTML = "";
+  new QRCode(box, {
+    text: currentProfile.card_uid,
+    width: 260,
+    height: 260,
+    correctLevel: QRCode.CorrectLevel.M,
+  });
+  document.getElementById("qr-modal").classList.remove("hidden");
+});
+
+document.getElementById("close-big-qr-btn").addEventListener("click", () => {
+  document.getElementById("qr-modal").classList.add("hidden");
+});
+
+async function loadLogs() {
+  const { data: logs } = await supabaseClient
+    .from("scan_logs")
+    .select("result, scanned_at, entry_confirmed")
+    .eq("scanned_profile_id", currentUser.id)
+    .order("scanned_at", { ascending: false })
+    .limit(20);
+
+  const tbody = document.querySelector("#log-table tbody");
+  tbody.innerHTML = "";
+  if (!logs || logs.length === 0) {
+    document.getElementById("no-logs").classList.remove("hidden");
+    return;
+  }
+  document.getElementById("no-logs").classList.add("hidden");
+  for (const log of logs) {
+    const tr = document.createElement("tr");
+    const date = new Date(log.scanned_at).toLocaleString("fr-FR");
+    tr.innerHTML = `<td>${date}</td><td>${log.result}</td><td>${log.entry_confirmed ? "✓" : "—"}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+async function loadShareLogs() {
+  const { data: logs } = await supabaseClient
+    .from("widget_verify_logs")
+    .select("result, verified_at")
+    .eq("visitor_profile_id", currentUser.id)
+    .order("verified_at", { ascending: false })
+    .limit(20);
+
+  const tbody = document.querySelector("#share-log-table tbody");
+  tbody.innerHTML = "";
+  if (!logs || logs.length === 0) {
+    document.getElementById("no-share-logs").classList.remove("hidden");
+    return;
+  }
+  document.getElementById("no-share-logs").classList.add("hidden");
+  for (const log of logs) {
+    const tr = document.createElement("tr");
+    const date = new Date(log.verified_at).toLocaleString("fr-FR");
+    tr.innerHTML = `<td>${date}</td><td>${log.result}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+document.getElementById("logout-btn").addEventListener("click", async () => {
+  await supabaseClient.auth.signOut();
+  window.location.href = "index.html";
+});
+
+document.getElementById("delete-account-btn").addEventListener("click", async () => {
+  if (!confirm("Supprimer définitivement ton compte amalgamG3 ? Cette action est irréversible.")) return;
+  if (!confirm("Vraiment sûr(e) ? Ton profil, tes documents scannés et ton historique seront effacés pour toujours.")) return;
+
+  const msg = document.getElementById("delete-account-msg");
+  msg.className = "msg"; msg.textContent = "Suppression en cours..."; msg.classList.remove("hidden");
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-account`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`,
+      "apikey": SUPABASE_ANON_KEY,
+    },
+    body: "{}",
+  });
+  const data = await res.json();
+
+  if (!res.ok) {
+    msg.className = "msg error";
+    msg.textContent = data.error || "Erreur lors de la suppression.";
+    return;
+  }
+
+  await supabaseClient.auth.signOut();
+  window.location.href = "index.html";
+});
+
+document.getElementById("copy-uid-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("copy-uid-btn");
+  try {
+    await navigator.clipboard.writeText(currentProfile.card_uid);
+    const original = btn.textContent;
+    btn.textContent = "Copié !";
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  } catch (e) {
+    prompt("Copie manuelle de l'identifiant :", currentProfile.card_uid);
+  }
+});
+
+let pairingChannel = null;
+
+function startPairing() {
+  createPairingSession();
+}
+
+document.getElementById("start-pairing-btn").addEventListener("click", startPairing);
+document.getElementById("rescan-btn").addEventListener("click", startPairing);
+
+async function createPairingSession() {
+  const { data: newSession, error } = await supabaseClient
+    .from("pairing_sessions")
+    .insert({ user_id: currentUser.id })
+    .select()
+    .single();
+
+  if (error) {
+    alert("Impossible de créer la session : " + error.message);
+    return;
+  }
+
+  document.getElementById("pairing-idle").classList.add("hidden");
+  document.getElementById("pairing-active").classList.remove("hidden");
+  document.getElementById("pairing-done").classList.add("hidden");
+  document.getElementById("pairing-status-text").textContent = "Scanne ce QR avec l'appareil photo de ton téléphone…";
+
+  const scanUrl = `${location.origin}${location.pathname.replace("dashboard.html", "scan.html")}?session=${newSession.id}`;
+  document.getElementById("pairing-qrcode").innerHTML = "";
+  new QRCode(document.getElementById("pairing-qrcode"), { text: scanUrl, width: 180, height: 180 });
+
+  if (pairingChannel) supabaseClient.removeChannel(pairingChannel);
+
+  pairingChannel = supabaseClient
+    .channel(`pairing_${newSession.id}`)
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "pairing_sessions", filter: `id=eq.${newSession.id}` },
+      async (payload) => {
+        const status = payload.new.status;
+        const statusText = document.getElementById("pairing-status-text");
+        if (status === "scanning") {
+          statusText.textContent = "Mobile connecté — scan en cours…";
+        } else if (status === "completed") {
+          document.getElementById("pairing-active").classList.add("hidden");
+          document.getElementById("pairing-done").classList.remove("hidden");
+          supabaseClient.removeChannel(pairingChannel);
+          pairingChannel = null;
+
+          const { data: refreshed } = await supabaseClient
+            .from("profiles")
+            .select("*")
+            .eq("id", currentUser.id)
+            .single();
+          if (refreshed) {
+            currentProfile = refreshed;
+            renderProfile();
+            renderCard();
+          }
+        } else if (status === "expired") {
+          statusText.textContent = "Session expirée — relance un nouveau scan.";
+        }
+      }
+    )
+    .subscribe();
+}
+
+function base64ToBlob(base64, mimeType) {
+  const bin = atob(base64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mimeType });
+}
+
+async function callWalletPass() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/wallet-pass`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`,
+      "apikey": SUPABASE_ANON_KEY,
+    },
+    body: "{}",
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Erreur wallet");
+  return data;
+}
+
+document.getElementById("google-wallet-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("google-wallet-btn");
+  const msg = document.getElementById("wallet-msg");
+  btn.disabled = true;
+  msg.classList.add("hidden");
+  try {
+    const data = await callWalletPass();
+    if (data.google_save_url) {
+      window.open(data.google_save_url, "_blank");
+    } else if (data.share_url) {
+      window.open(data.share_url, "_blank");
+    } else {
+      throw new Error("Lien Google Wallet indisponible.");
+    }
+  } catch (err) {
+    msg.className = "msg error";
+    msg.textContent = err.message || String(err);
+    msg.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById("apple-wallet-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("apple-wallet-btn");
+  const msg = document.getElementById("wallet-msg");
+  btn.disabled = true;
+  msg.classList.add("hidden");
+  try {
+    const data = await callWalletPass();
+    if (data.apple_pass_base64) {
+      const blob = base64ToBlob(data.apple_pass_base64, "application/vnd.apple.pkpass");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "amalgamG3.pkpass";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } else if (data.share_url) {
+      window.open(data.share_url, "_blank");
+    } else {
+      throw new Error("Carte Apple Wallet indisponible.");
+    }
+  } catch (err) {
+    msg.className = "msg error";
+    msg.textContent = err.message || String(err);
+    msg.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+init();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>App &amp; Site web — amalgamG3</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="assets/img/favicon-32.png?v=1787907977" type="image/png" sizes="32x32">
+<link rel="icon" href="assets/img/favicon-16.png?v=1787907977" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=1787907977">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css?v=1787907977">
+</head>
+<body>
+
+<div class="nav">
+  <div class="logo"><a href="index.html" style="color:inherit;text-decoration:none">amalgam<span>G3</span><span class="baseline">Identification &amp; vérification en commerce</span></a></div>
+  <div class="nav-actions"><button class="btn ghost" id="logout-btn">Déconnexion</button></div>
+</div>
+
+<div style="background:var(--grey-bg-alt);border-bottom:1px solid var(--grey-border);padding:12px 24px;display:flex;gap:24px;flex-wrap:wrap">
+  <a href="merchant.html" style="color:var(--grey-text);font-weight:600;text-decoration:none">Scanner</a>
+  <a href="merchant-profile.html" style="color:var(--grey-text);font-weight:600;text-decoration:none">Mon commerce</a>
+  <a href="merchant-widgets.html" style="color:var(--blue-france);font-weight:600;text-decoration:none;border-bottom:2px solid var(--blue-france);padding-bottom:4px">App &amp; Site web</a>
+  <a href="merchant-ai.html" style="color:var(--grey-text);font-weight:600;text-decoration:none">IA &amp; MCP</a>
+</div>
+
+<div class="container">
+
+  <div id="profile-incomplete-notice" class="msg error hidden" style="margin-bottom:20px">
+    Complète d'abord le profil de ton commerce pour créer des boutons de vérification. <a href="merchant-profile.html">Compléter mon profil</a>
+  </div>
+
+  <div id="main-content" class="hidden">
+
+    <div class="panel" style="margin-bottom:1px">
+      <h3>Comment ça marche</h3>
+
+      <p style="font-weight:600;margin-bottom:4px">1. Crée un bouton</p>
+      <p class="wallet-note" style="text-align:left;margin-top:0">
+        Donne-lui un nom (pour toi, pas affiché au client), un âge minimum, et éventuellement une URL de redirection. Tu peux créer plusieurs boutons avec des seuils différents (ex: 18 ans pour l'entrée, 21 ans pour certains alcools) — chacun a son propre code à intégrer et ses propres informations demandées. Exemple : un contrôle d'accès n'a besoin de rien de plus que le résultat, un service qui doit enregistrer l'identité voudra le nom et la date de naissance, une administration voudra en plus la date d'expiration du document — coche uniquement ce dont tu as besoin, le visiteur voit toujours ce qui lui est demandé avant de valider.
+      </p>
+
+      <p style="font-weight:600;margin-bottom:4px">2. Colle le code sur ton site ou ton app</p>
+      <p class="wallet-note" style="text-align:left;margin-top:0">
+        Chaque bouton généré ci-dessous te donne un bloc HTML prêt à copier-coller à l'endroit de ta page où tu veux afficher "Vérifier mon âge". Aucune inscription ni compte développeur nécessaire — c'est un simple bouton HTML.
+      </p>
+
+      <p style="font-weight:600;margin-bottom:4px">3. Ce qui se passe quand un visiteur clique</p>
+      <div class="wallet-note" style="text-align:left;margin-top:0">
+        <div style="margin-bottom:8px"><strong>Sur ordinateur :</strong> un QR code s'affiche. Le visiteur le scanne avec son téléphone, qui ouvre la vérification là-bas.</div>
+        <div style="margin-bottom:8px"><strong>Sur mobile, déjà connecté à amalgamG3 :</strong> vérification en un clic, aucun scan nécessaire.</div>
+        <div style="margin-bottom:8px"><strong>Sur mobile, pas connecté :</strong> le visiteur est invité à se connecter ou créer un compte, puis revient automatiquement terminer la vérification.</div>
+        <div>Dans tous les cas, tu ne reçois que le résultat (vérifié/refusé/compte non vérifié/expiré) et les informations que tu as cochées à l'étape 1 pour ce bouton — jamais la pièce d'identité elle-même. Si tu as coché "date de naissance", tu la reçois en clair ; sinon, seul l'âge calculé et le résultat te sont transmis. Le visiteur voit toujours ce qui va être partagé avant de valider.</div>
+      </div>
+
+      <p style="font-weight:600;margin-bottom:4px">4. Récupère le résultat sur ton site</p>
+      <div class="wallet-note" style="text-align:left;margin-top:0">
+        <div style="margin-bottom:8px">
+          <strong>Avec URL de redirection</strong> (recommandé si le bouton ouvre une page, pas une popup) : le visiteur est automatiquement renvoyé vers l'URL que tu as configurée, avec le résultat dans les paramètres de l'adresse :
+          <code>?verified=true&amp;result=verified&amp;name=Jean+Dupont&amp;age=25</code>. Ta page n'a qu'à lire ces paramètres pour savoir quoi faire (débloquer le contenu, afficher un message, etc.).
+        </div>
+        <div>
+          <strong>Sans URL de redirection</strong> : le code copié inclut déjà un script qui écoute le résultat via <code>postMessage</code> (utile si le bouton ouvre une popup au-dessus de ta page, sans la quitter). Regarde les commentaires dans le code copié pour brancher ta propre logique.
+        </div>
+      </div>
+
+      <p style="font-weight:600;margin-bottom:4px">5. Utilisation dans une app (Android/iOS)</p>
+      <p class="wallet-note" style="text-align:left;margin-top:0">
+        Si ton app est une "WebView" (elle affiche une page web dans l'app, via des outils comme AppCreator24, Median.co, WebIntoApp...), le bouton fonctionne directement, à condition d'avoir activé l'autorisation caméra pour la WebView (nécessaire pour scanner le QR ou pour badger via NFC côté commerçant). Pour une app 100% native (pas de WebView), utilise la redirection (étape 4) : elle fonctionne aussi depuis une app en ouvrant le lien dans le navigateur du téléphone.
+      </p>
+
+      <p style="font-weight:600;margin-bottom:4px">6. Gérer tes boutons avec Claude</p>
+      <p class="wallet-note" style="text-align:left;margin-top:0">
+        Plutôt que de tout faire depuis cette page, tu peux connecter ton compte commerce à <a href="https://claude.com" target="_blank" style="color:var(--blue-france)">Claude</a> et lui demander directement de créer, modifier ou lister tes boutons, de te donner le code à intégrer, ou de mettre à jour ton profil commerce — le tout en langage naturel.
+      </p>
+      <p class="wallet-note" style="text-align:left;margin-top:0">
+        Mise en place (aucune installation) : va dans l'onglet <a href="merchant-ai.html" style="color:var(--blue-france)">IA &amp; MCP</a>, génère ton lien, colle-le dans Claude → Paramètres → Connecteurs. Ce lien ne donne accès qu'à ton propre compte commerce, jamais à l'admin ni aux autres comptes.
+      </p>
+      <p class="wallet-note" style="text-align:left;margin-top:0">
+        Tu utilises Claude Code avec un serveur local plutôt qu'un connecteur ? Voir <a href="mcp-server/README.md" target="_blank" style="color:var(--blue-france)">mcp-server/README.md</a> pour l'option avancée.
+      </p>
+
+      <p style="font-weight:600;margin-bottom:4px">Sécurité</p>
+      <p class="wallet-note" style="text-align:left;margin-top:0;margin-bottom:0">
+        Chaque bouton a un identifiant unique et n'est lié qu'à ton compte commerçant — personne d'autre ne peut voir tes boutons ni leurs résultats. Chaque vérification est journalisée (visible dans les logs internes de ton compte).
+      </p>
+    </div>
+
+    <div class="panel">
+      <h3>Créer un bouton</h3>
+
+      <label for="new-button-label">Nom du bouton (usage interne)</label>
+      <input id="new-button-label" type="text" placeholder="ex: Entrée soirée 18+">
+
+      <label for="new-button-age">Âge minimum requis</label>
+      <input id="new-button-age" type="number" min="0" max="99" value="18" style="max-width:120px">
+
+      <label for="new-button-redirect">URL de redirection après vérification (optionnel)</label>
+      <input id="new-button-redirect" type="url" placeholder="https://tonsite.com/apres-verification">
+      <p class="wallet-note" style="text-align:left">Si renseignée, le visiteur est automatiquement redirigé vers cette page après le scan, avec le résultat et les informations cochées ci-dessous dans l'URL. Sinon, la fenêtre se referme simplement et le résultat est transmis via <code>postMessage</code> uniquement.</p>
+
+      <label style="margin-top:20px">Informations à récupérer (uniquement si le visiteur est vérifié)</label>
+      <p class="wallet-note" style="text-align:left;margin-top:0">Ne coche que ce dont tu as réellement besoin — par exemple un contrôle d'âge simple n'a besoin de rien de plus que le résultat, alors qu'un service qui doit enregistrer l'identité du visiteur aura besoin du nom et de la date de naissance.</p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="new-button-request-name" style="width:auto" checked> Nom complet</label>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="new-button-request-dob" style="width:auto"> Date de naissance exacte</label>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="new-button-request-expiry" style="width:auto"> Date d'expiration du document (ex: contrôle par un état)</label>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="new-button-request-nationality" style="width:auto"> Nationalité</label>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="new-button-request-photo" style="width:auto"> Photo</label>
+      </div>
+
+      <div class="submit-row" style="max-width:220px">
+        <button class="btn" id="create-button-btn">Créer le bouton</button>
+      </div>
+      <div id="create-button-msg" class="msg hidden"></div>
+
+      <div id="verify-buttons-list" style="margin-top:24px"></div>
+    </div>
+
+    <div class="panel" style="margin-top:1px">
+      <h3>Historique des vérifications</h3>
+      <table class="log-table" id="widget-log-table">
+        <thead><tr><th>Date</th><th>Bouton</th><th>Résultat</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p id="no-widget-logs" class="wallet-note hidden">Aucune vérification via widget pour l'instant.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <div class="footer-inner">
+    <div>amalgamG3 — Système d'identification pour commerces.<br>Service privé, non affilié à une administration ou un service public.</div>
+    <div class="footer-links">
+      <a href="index.html">Accueil</a>
+      <a href="legal.html#accessibilite">Accessibilité</a>
+      <a href="legal.html#mentions">Mentions légales</a>
+      <a href="legal.html#confidentialite">Confidentialité</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/js/config.js?v=1787907977"></script>
+<script>
+let currentUser = null;
+let merchantLogoUrl = null;
+
+async function forceReloginWithMessage(message) {
+  console.error(message);
+  await supabaseClient.auth.signOut();
+  window.location.href = "login.html?msg=" + encodeURIComponent(message);
+}
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href = "login.html"; return; }
+  currentUser = session.user;
+
+  let { data: profile, error: profileErr } = await supabaseClient
+    .from("profiles")
+    .select("role, logo_path, description, service_type")
+    .eq("id", currentUser.id)
+    .maybeSingle();
+
+  if (profileErr) { await forceReloginWithMessage("Erreur de session : " + profileErr.message); return; }
+
+  if (!profile) {
+    const meta = currentUser.user_metadata || {};
+    if (meta.role !== "merchant") { window.location.href = "dashboard.html"; return; }
+    const { data: created, error: createErr } = await supabaseClient
+      .from("profiles")
+      .insert({
+        id: currentUser.id,
+        role: "merchant",
+        full_name: meta.full_name || "",
+        date_of_birth: meta.date_of_birth || "2000-01-01",
+        business_name: meta.business_name || null,
+      })
+      .select("role, logo_path, description, service_type")
+      .single();
+    if (createErr) {
+      await forceReloginWithMessage("Ta session n'est plus valide (compte supprimé ou modifié). Reconnecte-toi.");
+      return;
+    }
+    profile = created;
+  }
+
+  if (profile.role !== "merchant") { window.location.href = "dashboard.html"; return; }
+
+  if (profile.logo_path) {
+    const { data } = supabaseClient.storage.from("merchant-logos").getPublicUrl(profile.logo_path);
+    merchantLogoUrl = data?.publicUrl ?? null;
+  }
+
+  const complete = !!(profile.logo_path && profile.description && profile.service_type);
+  document.getElementById("main-content").classList.toggle("hidden", !complete);
+  document.getElementById("profile-incomplete-notice").classList.toggle("hidden", complete);
+
+  if (complete) { loadButtons(); loadWidgetLogs(); }
+}
+
+async function loadWidgetLogs() {
+  const { data: buttons } = await supabaseClient
+    .from("verify_buttons")
+    .select("id, label")
+    .eq("merchant_id", currentUser.id);
+  const labelById = {};
+  (buttons || []).forEach((b) => { labelById[b.id] = b.label; });
+
+  const { data: logs } = await supabaseClient
+    .from("widget_verify_logs")
+    .select("button_id, result, verified_at")
+    .eq("merchant_id", currentUser.id)
+    .order("verified_at", { ascending: false })
+    .limit(20);
+
+  const tbody = document.querySelector("#widget-log-table tbody");
+  tbody.innerHTML = "";
+  if (!logs || logs.length === 0) {
+    document.getElementById("no-widget-logs").classList.remove("hidden");
+    return;
+  }
+  document.getElementById("no-widget-logs").classList.add("hidden");
+  for (const log of logs) {
+    const tr = document.createElement("tr");
+    const date = new Date(log.verified_at).toLocaleString("fr-FR");
+    tr.innerHTML = `<td>${date}</td><td>${labelById[log.button_id] || "(bouton supprimé)"}</td><td>${log.result}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+function embedSnippetFor(buttonId, label) {
+  const url = `${location.origin}${location.pathname.replace("merchant-widgets.html", "verify.html")}?button=${buttonId}`;
+  const domId = `amalgamg3-btn-${buttonId}`;
+  const iconHtml = merchantLogoUrl
+    ? `<img src="${merchantLogoUrl}" alt="" width="24" height="24" style="border-radius:50%;object-fit:cover;display:block">`
+    : `<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#000091"/><path d="M7 12.5l3 3 7-7" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  return `<style>
+  #${domId} {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    height: 48px;
+    padding: 0 20px 0 14px;
+    background: #ffffff;
+    color: #202124;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.1px;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.10);
+    transition: box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease;
+  }
+  #${domId}:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.16); transform: translateY(-1px); background: #fafbfc; }
+  #${domId}:active { transform: translateY(0); box-shadow: 0 2px 6px rgba(0,0,0,0.12); background: #f1f3f4; }
+</style>
+<button id="${domId}" onclick="window.open('${url}', 'amalgamG3Verify', 'width=420,height=640')">
+  ${iconHtml}
+  <span>${label}</span>
+</button>
+
+<script>
+// Optionnel : reçoit le résultat de la vérification dans la page qui a ouvert le popup
+// (si tu as configuré une URL de redirection sur ce bouton, le visiteur y sera aussi renvoyé directement).
+window.addEventListener('message', function(e) {
+  if (e.data && e.data.source === 'amalgamG3-widget') {
+    console.log('Résultat vérification amalgamG3 :', e.data.result, 'nom:', e.data.name, 'âge:', e.data.age);
+    // e.data.result vaut 'verified', 'rejected' ou 'not_verified'
+    // -> ajoute ici ta logique (débloquer le contenu, rediriger, etc.)
+  }
+});
+<\/script>`;
+}
+
+async function loadButtons() {
+  const { data: buttons, error } = await supabaseClient
+    .from("verify_buttons")
+    .select("id, label, min_age, redirect_url, created_at, request_name, request_date_of_birth, request_document_expiry, request_nationality, request_photo")
+    .eq("merchant_id", currentUser.id)
+    .order("created_at", { ascending: false });
+
+  const list = document.getElementById("verify-buttons-list");
+  list.innerHTML = "";
+  if (error || !buttons || buttons.length === 0) {
+    list.innerHTML = `<p class="wallet-note">Aucun bouton créé pour l'instant.</p>`;
+    return;
+  }
+
+  for (const b of buttons) {
+    const wrap = document.createElement("div");
+    wrap.className = "panel";
+    wrap.style.marginTop = "12px";
+    const requestedLabels = [];
+    if (b.request_name) requestedLabels.push("Nom");
+    if (b.request_date_of_birth) requestedLabels.push("Date de naissance");
+    if (b.request_document_expiry) requestedLabels.push("Expiration document");
+    if (b.request_nationality) requestedLabels.push("Nationalité");
+    if (b.request_photo) requestedLabels.push("Photo");
+
+    wrap.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div>
+          <strong>${b.label}</strong> <span class="status-badge pending" style="font-size:0.7rem">${b.min_age}+</span>
+          ${b.redirect_url ? `<div class="wallet-note">Redirige vers : ${b.redirect_url}</div>` : `<div class="wallet-note">Pas de redirection (postMessage uniquement)</div>`}
+          <div class="wallet-note">Infos demandées : ${requestedLabels.length ? requestedLabels.join(", ") : "aucune (résultat seul)"}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn ghost" data-copy-id="${b.id}" data-copy-label="${b.label.replace(/"/g, '&quot;')}">Copier le code</button>
+          <button class="btn ghost" data-edit-id="${b.id}">Modifier</button>
+          <button class="btn ghost" data-delete-id="${b.id}" style="border-color:var(--red-error);color:var(--red-error)">Supprimer</button>
+        </div>
+      </div>
+      <textarea readonly style="width:100%;margin-top:10px;padding:10px;font-family:monospace;font-size:0.8rem;border:1px solid var(--grey-border);height:110px">${embedSnippetFor(b.id, b.label)}</textarea>
+
+      <div id="edit-form-${b.id}" class="hidden" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--grey-border)">
+        <label for="edit-label-${b.id}">Nom du bouton</label>
+        <input id="edit-label-${b.id}" type="text" value="${b.label.replace(/"/g, '&quot;')}">
+        <label for="edit-age-${b.id}">Âge minimum</label>
+        <input id="edit-age-${b.id}" type="number" min="0" max="99" value="${b.min_age}" style="max-width:120px">
+        <label for="edit-redirect-${b.id}">URL de redirection (optionnel)</label>
+        <input id="edit-redirect-${b.id}" type="url" value="${b.redirect_url || ''}" placeholder="https://tonsite.com/apres-verification">
+        <label style="margin-top:16px">Informations à récupérer</label>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+          <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="edit-request-name-${b.id}" style="width:auto" ${b.request_name ? "checked" : ""}> Nom complet</label>
+          <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="edit-request-dob-${b.id}" style="width:auto" ${b.request_date_of_birth ? "checked" : ""}> Date de naissance exacte</label>
+          <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="edit-request-expiry-${b.id}" style="width:auto" ${b.request_document_expiry ? "checked" : ""}> Date d'expiration du document</label>
+          <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="edit-request-nationality-${b.id}" style="width:auto" ${b.request_nationality ? "checked" : ""}> Nationalité</label>
+          <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="edit-request-photo-${b.id}" style="width:auto" ${b.request_photo ? "checked" : ""}> Photo</label>
+        </div>
+        <div class="submit-row" style="max-width:220px"><button class="btn" data-save-id="${b.id}">Enregistrer</button></div>
+        <div id="edit-msg-${b.id}" class="msg hidden"></div>
+      </div>
+    `;
+
+    wrap.querySelector("button[data-copy-id]").addEventListener("click", async (e) => {
+      const snippet = embedSnippetFor(e.target.getAttribute("data-copy-id"), e.target.getAttribute("data-copy-label"));
+      try {
+        await navigator.clipboard.writeText(snippet);
+        e.target.textContent = "Copié !";
+        setTimeout(() => { e.target.textContent = "Copier le code"; }, 1500);
+      } catch (err) {
+        prompt("Copie manuelle du code :", snippet);
+      }
+    });
+
+    wrap.querySelector("button[data-edit-id]").addEventListener("click", () => {
+      document.getElementById(`edit-form-${b.id}`).classList.toggle("hidden");
+    });
+
+    wrap.querySelector("button[data-delete-id]").addEventListener("click", async () => {
+      if (!confirm(`Supprimer le bouton "${b.label}" ? Le code déjà collé sur ton site cessera de fonctionner.`)) return;
+      const { error } = await supabaseClient.from("verify_buttons").delete().eq("id", b.id);
+      if (error) { alert("Erreur : " + error.message); return; }
+      loadButtons();
+    });
+
+    wrap.querySelector(`button[data-save-id="${b.id}"]`).addEventListener("click", async () => {
+      const editMsg = document.getElementById(`edit-msg-${b.id}`);
+      const newLabel = document.getElementById(`edit-label-${b.id}`).value.trim();
+      const newAge = parseInt(document.getElementById(`edit-age-${b.id}`).value, 10);
+      const newRedirect = document.getElementById(`edit-redirect-${b.id}`).value.trim();
+
+      if (!newLabel) {
+        editMsg.className = "msg error"; editMsg.textContent = "Donne un nom au bouton."; editMsg.classList.remove("hidden");
+        return;
+      }
+      if (isNaN(newAge) || newAge < 0 || newAge > 99) {
+        editMsg.className = "msg error"; editMsg.textContent = "Âge invalide."; editMsg.classList.remove("hidden");
+        return;
+      }
+      if (newRedirect && !/^https?:\/\//i.test(newRedirect)) {
+        editMsg.className = "msg error"; editMsg.textContent = "L'URL doit commencer par http:// ou https://"; editMsg.classList.remove("hidden");
+        return;
+      }
+
+      const { error } = await supabaseClient
+        .from("verify_buttons")
+        .update({
+          label: newLabel,
+          min_age: newAge,
+          redirect_url: newRedirect || null,
+          request_name: document.getElementById(`edit-request-name-${b.id}`).checked,
+          request_date_of_birth: document.getElementById(`edit-request-dob-${b.id}`).checked,
+          request_document_expiry: document.getElementById(`edit-request-expiry-${b.id}`).checked,
+          request_nationality: document.getElementById(`edit-request-nationality-${b.id}`).checked,
+          request_photo: document.getElementById(`edit-request-photo-${b.id}`).checked,
+        })
+        .eq("id", b.id);
+
+      if (error) {
+        editMsg.className = "msg error"; editMsg.textContent = error.message; editMsg.classList.remove("hidden");
+        return;
+      }
+      loadButtons();
+    });
+
+    list.appendChild(wrap);
+  }
+}
+
+document.getElementById("create-button-btn").addEventListener("click", async () => {
+  const msg = document.getElementById("create-button-msg");
+  const label = document.getElementById("new-button-label").value.trim();
+  const minAge = parseInt(document.getElementById("new-button-age").value, 10);
+  const redirectUrl = document.getElementById("new-button-redirect").value.trim();
+
+  if (!label) {
+    msg.className = "msg error"; msg.textContent = "Donne un nom au bouton."; msg.classList.remove("hidden");
+    return;
+  }
+  if (isNaN(minAge) || minAge < 0 || minAge > 99) {
+    msg.className = "msg error"; msg.textContent = "Âge invalide."; msg.classList.remove("hidden");
+    return;
+  }
+  if (redirectUrl && !/^https?:\/\//i.test(redirectUrl)) {
+    msg.className = "msg error"; msg.textContent = "L'URL de redirection doit commencer par http:// ou https://"; msg.classList.remove("hidden");
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("verify_buttons")
+    .insert({
+      merchant_id: currentUser.id,
+      label,
+      min_age: minAge,
+      redirect_url: redirectUrl || null,
+      request_name: document.getElementById("new-button-request-name").checked,
+      request_date_of_birth: document.getElementById("new-button-request-dob").checked,
+      request_document_expiry: document.getElementById("new-button-request-expiry").checked,
+      request_nationality: document.getElementById("new-button-request-nationality").checked,
+      request_photo: document.getElementById("new-button-request-photo").checked,
+    });
+
+  if (error) {
+    msg.className = "msg error"; msg.textContent = error.message; msg.classList.remove("hidden");
+    return;
+  }
+
+  msg.className = "msg ok"; msg.textContent = "Bouton créé."; msg.classList.remove("hidden");
+  document.getElementById("new-button-label").value = "";
+  document.getElementById("new-button-age").value = "18";
+  document.getElementById("new-button-redirect").value = "";
+  document.getElementById("new-button-request-name").checked = true;
+  document.getElementById("new-button-request-dob").checked = false;
+  document.getElementById("new-button-request-expiry").checked = false;
+  document.getElementById("new-button-request-nationality").checked = false;
+  document.getElementById("new-button-request-photo").checked = false;
+  loadButtons();
+});
+
+document.getElementById("logout-btn").addEventListener("click", async () => {
+  await supabaseClient.auth.signOut();
+  window.location.href = "index.html";
+});
+
+init();
+</script>
+
+</body>
+</html>

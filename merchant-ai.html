@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IA &amp; MCP — amalgamG3</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="assets/img/favicon-32.png?v=1787907977" type="image/png" sizes="32x32">
+<link rel="icon" href="assets/img/favicon-16.png?v=1787907977" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=1787907977">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css?v=1787907977">
+</head>
+<body>
+
+<div class="nav">
+  <div class="logo"><a href="index.html" style="color:inherit;text-decoration:none">amalgam<span>G3</span><span class="baseline">Identification &amp; vérification en commerce</span></a></div>
+  <div class="nav-actions"><button class="btn ghost" id="logout-btn">Déconnexion</button></div>
+</div>
+
+<div style="background:var(--grey-bg-alt);border-bottom:1px solid var(--grey-border);padding:12px 24px;display:flex;gap:24px;flex-wrap:wrap">
+  <a href="merchant.html" style="color:var(--grey-text);font-weight:600;text-decoration:none">Scanner</a>
+  <a href="merchant-profile.html" style="color:var(--grey-text);font-weight:600;text-decoration:none">Mon commerce</a>
+  <a href="merchant-widgets.html" style="color:var(--grey-text);font-weight:600;text-decoration:none">App &amp; Site web</a>
+  <a href="merchant-ai.html" style="color:var(--blue-france);font-weight:600;text-decoration:none;border-bottom:2px solid var(--blue-france);padding-bottom:4px">IA &amp; MCP</a>
+</div>
+
+<div class="container">
+
+  <div class="panel" style="margin-bottom:1px">
+    <h3>IA &amp; MCP</h3>
+    <p class="wallet-note" style="text-align:left;margin-top:0">
+      Connecte ton compte commerce à Claude pour lui demander directement de créer des boutons de vérification, te donner le code à coller sur ton site, ou modifier ton profil commerce — le tout en langage naturel, sans repasser par ce site. <strong>Aucune installation nécessaire</strong>, juste un lien à copier-coller.
+    </p>
+    <p class="wallet-note" style="text-align:left">
+      Exemples de demandes une fois connecté : <em>« crée un bouton 18 ans pour l'entrée en salle »</em>, <em>« liste mes boutons de vérification »</em>, <em>« donne-moi le code du bouton Entrée soirée »</em>, <em>« change mon âge minimum à 21 ans »</em>.
+    </p>
+  </div>
+
+  <div class="panel" style="margin-top:1px">
+    <h3>Connecter Claude (recommandé — facile)</h3>
+
+    <div id="api-key-setup" class="hidden" style="margin-top:6px">
+      <p style="font-weight:600;margin-bottom:6px">1. Copie ce lien</p>
+      <div style="display:flex;gap:8px;align-items:stretch;flex-wrap:wrap">
+        <input id="mcp-link-display" type="text" readonly style="flex:1;min-width:220px;font-family:monospace;font-size:0.8rem">
+        <button class="btn" id="copy-mcp-link-btn" style="white-space:nowrap">Copier le lien</button>
+      </div>
+
+      <p style="font-weight:600;margin:18px 0 6px">2. Ajoute-le dans Claude</p>
+      <p class="wallet-note" style="text-align:left;margin-top:0">
+        Sur <a href="https://claude.ai" target="_blank" style="color:var(--blue-france)">claude.ai</a> (ou l'app Claude) → <strong>Paramètres</strong> → <strong>Connecteurs</strong> → <strong>Ajouter un connecteur personnalisé</strong> → colle le lien copié à l'étape 1 → valide.
+      </p>
+
+      <p style="font-weight:600;margin:18px 0 6px">3. C'est prêt</p>
+      <p class="wallet-note" style="text-align:left;margin-top:0;margin-bottom:0">
+        Demande-lui par exemple : <em>« crée un bouton de vérification 18 ans et donne-moi le code à ajouter sur mon site »</em>.
+      </p>
+    </div>
+
+    <div class="submit-row" style="max-width:260px;margin-top:16px">
+      <button class="btn" id="generate-api-key-btn">Générer mon lien</button>
+    </div>
+    <p id="api-key-status" class="wallet-note" style="text-align:left"></p>
+    <p class="wallet-note" style="text-align:left">Ce lien donne accès uniquement à ton propre compte commerce (jamais aux comptes particuliers ni à l'admin) — garde-le secret comme un mot de passe. Régénérer le lien invalide immédiatement l'ancien.</p>
+  </div>
+
+  <div class="panel" style="margin-top:1px">
+    <h3>Option avancée — serveur local (Claude Code / Claude Desktop)</h3>
+    <p class="wallet-note" style="text-align:left;margin-top:0">
+      Tu préfères Claude Code avec un serveur MCP local plutôt qu'un connecteur distant ? Le code source et les instructions sont dans
+      <a href="mcp-server/README.md" target="_blank" style="color:var(--blue-france)">mcp-server/README.md</a> (fichiers <a href="mcp-server/index.js" target="_blank" style="color:var(--blue-france)">index.js</a> et <a href="mcp-server/package.json" target="_blank" style="color:var(--blue-france)">package.json</a> à télécharger). Cette option nécessite Node.js installé sur ta machine.
+    </p>
+  </div>
+
+  <div class="panel" style="margin-top:1px">
+    <h3>Sécurité</h3>
+    <p class="wallet-note" style="text-align:left;margin-top:0;margin-bottom:0">
+      Le lien MCP n'a accès qu'à ton compte commerce : tes boutons de vérification et ton profil commerce. Il ne peut jamais lire ni modifier les comptes particuliers, ni accéder au panneau admin. Chaque action passée par Claude est exécutée par le même serveur que celui utilisé par cette page — rien de plus n'est possible.
+    </p>
+  </div>
+
+</div>
+
+<div class="footer">
+  <div class="footer-inner">
+    <div>amalgamG3 — Système d'identification pour commerces.<br>Service privé, non affilié à une administration ou un service public.</div>
+    <div class="footer-links">
+      <a href="index.html">Accueil</a>
+      <a href="legal.html#accessibilite">Accessibilité</a>
+      <a href="legal.html#mentions">Mentions légales</a>
+      <a href="legal.html#confidentialite">Confidentialité</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/js/config.js?v=1787907977"></script>
+<script>
+let currentUser = null;
+let currentProfile = null;
+
+async function forceReloginWithMessage(message) {
+  console.error(message);
+  await supabaseClient.auth.signOut();
+  window.location.href = "login.html?msg=" + encodeURIComponent(message);
+}
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href = "login.html"; return; }
+  currentUser = session.user;
+
+  const { data: profile, error: profileErr } = await supabaseClient
+    .from("profiles")
+    .select("role, merchant_api_key")
+    .eq("id", currentUser.id)
+    .maybeSingle();
+
+  if (profileErr) { await forceReloginWithMessage("Erreur de session : " + profileErr.message); return; }
+  if (!profile || profile.role !== "merchant") { window.location.href = "dashboard.html"; return; }
+
+  currentProfile = profile;
+  document.getElementById("api-key-status").textContent = profile.merchant_api_key
+    ? "Un lien existe déjà pour ce compte (masqué — régénère-le si tu l'as perdu, l'ancien cessera de fonctionner)."
+    : "Aucun lien généré pour l'instant.";
+}
+
+document.getElementById("generate-api-key-btn").addEventListener("click", async () => {
+  if (currentProfile.merchant_api_key && !confirm("Régénérer le lien va invalider l'ancien immédiatement — s'il est déjà connecté à Claude, il cessera de fonctionner tant que tu n'y colles pas le nouveau. Continuer ?")) {
+    return;
+  }
+  const key = "amg3_" + crypto.randomUUID().replace(/-/g, "");
+  const { error } = await supabaseClient.from("profiles").update({ merchant_api_key: key }).eq("id", currentUser.id);
+  const setup = document.getElementById("api-key-setup");
+  const linkInput = document.getElementById("mcp-link-display");
+  const status = document.getElementById("api-key-status");
+  if (error) {
+    status.textContent = "Erreur : " + error.message;
+    return;
+  }
+  currentProfile.merchant_api_key = key;
+  linkInput.value = `${SUPABASE_URL}/functions/v1/mcp-remote/${key}`;
+  setup.classList.remove("hidden");
+  status.textContent = "Ton lien est prêt — suis les 3 étapes ci-dessus. Garde-le secret, il ne sera plus réaffiché en entier ensuite.";
+});
+
+document.getElementById("copy-mcp-link-btn").addEventListener("click", async () => {
+  const linkInput = document.getElementById("mcp-link-display");
+  const btn = document.getElementById("copy-mcp-link-btn");
+  try {
+    await navigator.clipboard.writeText(linkInput.value);
+    btn.textContent = "Copié !";
+    setTimeout(() => { btn.textContent = "Copier le lien"; }, 1500);
+  } catch {
+    linkInput.select();
+  }
+});
+
+document.getElementById("logout-btn").addEventListener("click", async () => {
+  await supabaseClient.auth.signOut();
+  window.location.href = "index.html";
+});
+
+init();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mon commerce — amalgamG3</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="assets/img/favicon-32.png?v=1787907977" type="image/png" sizes="32x32">
+<link rel="icon" href="assets/img/favicon-16.png?v=1787907977" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=1787907977">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css?v=1787907977">
+</head>
+<body>
+
+<div class="nav">
+  <div class="logo"><a href="index.html" style="color:inherit;text-decoration:none">amalgam<span>G3</span><span class="baseline">Identification &amp; vérification en commerce</span></a></div>
+  <div class="nav-actions"><button class="btn ghost" id="logout-btn">Déconnexion</button></div>
+</div>
+
+<div style="background:var(--grey-bg-alt);border-bottom:1px solid var(--grey-border);padding:12px 24px;display:flex;gap:24px;flex-wrap:wrap">
+  <a href="merchant.html" style="color:var(--grey-text);font-weight:600;text-decoration:none">Scanner</a>
+  <a href="merchant-profile.html" style="color:var(--blue-france);font-weight:600;text-decoration:none;border-bottom:2px solid var(--blue-france);padding-bottom:4px">Mon commerce</a>
+  <a href="merchant-widgets.html" style="color:var(--grey-text);font-weight:600;text-decoration:none">App &amp; Site web</a>
+  <a href="merchant-ai.html" style="color:var(--grey-text);font-weight:600;text-decoration:none">IA &amp; MCP</a>
+</div>
+
+<div class="container">
+
+  <div class="panel" style="margin-bottom:1px">
+    <h3>Mon commerce</h3>
+    <p class="wallet-note" style="text-align:left;margin-top:0">Ces informations sont obligatoires et affichées lors des vérifications d'âge sur ton propre site (widget).</p>
+
+    <label for="logo-input">Logo</label>
+    <div style="display:flex;align-items:center;gap:14px;margin-top:8px">
+      <img id="logo-preview" style="width:64px;height:64px;object-fit:cover;background:var(--grey-bg-alt);border:1px solid var(--grey-border)" alt="logo">
+      <input id="logo-input" type="file" accept="image/*">
+    </div>
+
+    <label for="description-input">Description du commerce</label>
+    <textarea id="description-input" rows="3" style="width:100%;padding:10px 12px;border:1px solid var(--grey-text);font-family:inherit;font-size:0.95rem"></textarea>
+
+    <label for="service-type-input">Type de service</label>
+    <select id="service-type-input">
+      <option value="">— Sélectionner —</option>
+      <option value="bar">Bar</option>
+      <option value="restaurant">Restaurant</option>
+      <option value="nightclub">Boîte de nuit / discothèque</option>
+      <option value="tabac">Tabac / bureau de tabac</option>
+      <option value="epicerie">Épicerie / commerce d'alcool</option>
+      <option value="evenementiel">Événementiel</option>
+      <option value="autre">Autre</option>
+    </select>
+
+    <div class="submit-row" style="max-width:240px">
+      <button class="btn" id="save-merchant-profile-btn">Enregistrer</button>
+    </div>
+    <div id="merchant-profile-msg" class="msg hidden"></div>
+  </div>
+
+  <div class="panel" style="margin-top:1px">
+    <h3>Filtre d'âge</h3>
+    <p class="wallet-note" style="text-align:left;margin-top:0">Seuil minimum requis pour qu'un scan renvoie "Identité vérifiée" dans votre commerce.</p>
+    <label for="min-age-input">Âge minimum (ans)</label>
+    <input id="min-age-input" type="number" min="0" max="99" style="max-width:120px">
+    <div class="submit-row" style="max-width:200px">
+      <button class="btn" id="save-min-age-btn">Enregistrer</button>
+    </div>
+    <div id="min-age-msg" class="msg hidden"></div>
+  </div>
+
+  <div class="panel" style="margin-top:1px">
+    <h3>Paramètres du compte</h3>
+    <p class="wallet-note" style="text-align:left;margin-top:0">Supprimer ce compte efface définitivement le profil du commerce, ses boutons de vérification et son historique de scans. Cette action est irréversible.</p>
+    <div class="submit-row" style="max-width:220px">
+      <button class="btn ghost" id="delete-account-btn" style="border-color:var(--red-error);color:var(--red-error)">Supprimer mon compte</button>
+    </div>
+    <div id="delete-account-msg" class="msg hidden"></div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <div class="footer-inner">
+    <div>amalgamG3 — Système d'identification pour commerces.<br>Service privé, non affilié à une administration ou un service public.</div>
+    <div class="footer-links">
+      <a href="index.html">Accueil</a>
+      <a href="legal.html#accessibilite">Accessibilité</a>
+      <a href="legal.html#mentions">Mentions légales</a>
+      <a href="legal.html#confidentialite">Confidentialité</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/js/config.js?v=1787907977"></script>
+<script>
+let currentUser = null;
+let currentProfile = null;
+
+async function forceReloginWithMessage(message) {
+  console.error(message);
+  await supabaseClient.auth.signOut();
+  window.location.href = "login.html?msg=" + encodeURIComponent(message);
+}
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href = "login.html"; return; }
+  currentUser = session.user;
+
+  let { data: profile, error: profileErr } = await supabaseClient
+    .from("profiles")
+    .select("role, min_age, business_name, logo_path, description, service_type")
+    .eq("id", currentUser.id)
+    .maybeSingle();
+
+  if (profileErr) { await forceReloginWithMessage("Erreur de session : " + profileErr.message); return; }
+
+  if (!profile) {
+    const meta = currentUser.user_metadata || {};
+    if (meta.role !== "merchant") { window.location.href = "dashboard.html"; return; }
+    const { data: created, error: createErr } = await supabaseClient
+      .from("profiles")
+      .insert({
+        id: currentUser.id,
+        role: "merchant",
+        full_name: meta.full_name || "",
+        date_of_birth: meta.date_of_birth || "2000-01-01",
+        business_name: meta.business_name || null,
+      })
+      .select("role, min_age, business_name, logo_path, description, service_type")
+      .single();
+    if (createErr) {
+      await forceReloginWithMessage("Ta session n'est plus valide (compte supprimé ou modifié). Reconnecte-toi.");
+      return;
+    }
+    profile = created;
+  }
+
+  if (profile.role !== "merchant") { window.location.href = "dashboard.html"; return; }
+  currentProfile = profile;
+  document.getElementById("min-age-input").value = profile.min_age;
+  renderMerchantProfileForm();
+}
+
+function renderMerchantProfileForm() {
+  document.getElementById("description-input").value = currentProfile.description || "";
+  document.getElementById("service-type-input").value = currentProfile.service_type || "";
+  if (currentProfile.logo_path) {
+    const { data } = supabaseClient.storage.from("merchant-logos").getPublicUrl(currentProfile.logo_path);
+    document.getElementById("logo-preview").src = data.publicUrl;
+  }
+}
+
+document.getElementById("save-merchant-profile-btn").addEventListener("click", async () => {
+  const msg = document.getElementById("merchant-profile-msg");
+  msg.className = "msg"; msg.textContent = "Enregistrement...";
+  msg.classList.remove("hidden");
+
+  try {
+    let logo_path = currentProfile.logo_path;
+    const logoFile = document.getElementById("logo-input").files[0];
+    if (logoFile) {
+      const MAX_LOGO_BYTES = 5 * 1024 * 1024;
+      if (!["image/png", "image/jpeg", "image/webp", "image/gif"].includes(logoFile.type)) {
+        throw new Error("Format d'image non supporté (PNG, JPEG, WebP ou GIF uniquement).");
+      }
+      if (logoFile.size > MAX_LOGO_BYTES) {
+        throw new Error("Le logo dépasse 5 Mo — choisis une image plus légère.");
+      }
+      const path = `${currentUser.id}/logo_${Date.now()}_${logoFile.name}`;
+      const { error: uploadErr } = await supabaseClient.storage.from("merchant-logos").upload(path, logoFile, { upsert: true });
+      if (uploadErr) throw uploadErr;
+      logo_path = path;
+    }
+
+    const description = document.getElementById("description-input").value.trim();
+    const service_type = document.getElementById("service-type-input").value;
+
+    if (!logo_path || !description || !service_type) {
+      throw new Error("Logo, description et type de service sont tous obligatoires.");
+    }
+
+    const { data: updated, error: updateErr } = await supabaseClient
+      .from("profiles")
+      .update({ logo_path, description, service_type })
+      .eq("id", currentUser.id)
+      .select("role, min_age, business_name, logo_path, description, service_type")
+      .single();
+    if (updateErr) throw updateErr;
+
+    currentProfile = updated;
+    renderMerchantProfileForm();
+    msg.className = "msg ok";
+    msg.textContent = "Profil enregistré.";
+  } catch (err) {
+    msg.className = "msg error";
+    msg.textContent = err.message || String(err);
+  }
+});
+
+document.getElementById("save-min-age-btn").addEventListener("click", async () => {
+  const msg = document.getElementById("min-age-msg");
+  const value = parseInt(document.getElementById("min-age-input").value, 10);
+  if (isNaN(value) || value < 0 || value > 99) {
+    msg.className = "msg error";
+    msg.textContent = "Âge invalide.";
+    msg.classList.remove("hidden");
+    return;
+  }
+  const { error } = await supabaseClient.from("profiles").update({ min_age: value }).eq("id", currentUser.id);
+  msg.className = error ? "msg error" : "msg ok";
+  msg.textContent = error ? error.message : "Seuil enregistré.";
+  msg.classList.remove("hidden");
+});
+
+document.getElementById("delete-account-btn").addEventListener("click", async () => {
+  if (!confirm("Supprimer définitivement ce compte commerce amalgamG3 ? Cette action est irréversible.")) return;
+  if (!confirm("Vraiment sûr(e) ? Le profil du commerce, ses boutons de vérification et son historique seront effacés pour toujours.")) return;
+
+  const msg = document.getElementById("delete-account-msg");
+  msg.className = "msg"; msg.textContent = "Suppression en cours..."; msg.classList.remove("hidden");
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-account`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`,
+      "apikey": SUPABASE_ANON_KEY,
+    },
+    body: "{}",
+  });
+  const data = await res.json();
+
+  if (!res.ok) {
+    msg.className = "msg error";
+    msg.textContent = data.error || "Erreur lors de la suppression.";
+    return;
+  }
+
+  await supabaseClient.auth.signOut();
+  window.location.href = "index.html";
+});
+
+document.getElementById("logout-btn").addEventListener("click", async () => {
+  await supabaseClient.auth.signOut();
+  window.location.href = "index.html";
+});
+
+init();
+</script>
+
+</body>
+</html>

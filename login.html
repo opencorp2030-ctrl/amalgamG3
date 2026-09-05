@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connexion — amalgamG3</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="assets/img/favicon-32.png?v=1787907977" type="image/png" sizes="32x32">
+<link rel="icon" href="assets/img/favicon-16.png?v=1787907977" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=1787907977">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css?v=1787907977">
+</head>
+<body>
+
+<div class="nav">
+  <div class="logo"><a href="index.html" style="color:inherit;text-decoration:none">amalgam<span>G3</span><span class="baseline">Identification &amp; vérification en commerce</span></a></div>
+  <div class="nav-actions"><a class="btn ghost" href="signup.html">Créer un compte</a></div>
+</div>
+
+<div class="container">
+  <div class="form-card">
+    <h2>Connexion</h2>
+    <form id="login-form">
+      <label for="email">Email</label>
+      <input id="email" type="email" required autocomplete="email">
+
+      <label for="password">Mot de passe</label>
+      <input id="password" type="password" required autocomplete="current-password">
+
+      <div class="submit-row">
+        <button class="btn" type="submit">Se connecter</button>
+      </div>
+      <div id="msg"></div>
+    </form>
+    <div id="url-msg" class="msg hidden"></div>
+    <div class="link-row"><a href="forgot-password.html">Mot de passe oublié ?</a></div>
+    <div class="link-row">Pas encore de compte ? <a href="signup.html">S'inscrire</a></div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-inner">
+    <div>amalgamG3 — Système d'identification pour commerces.<br>Service privé, non affilié à une administration ou un service public.</div>
+    <div class="footer-links">
+      <a href="index.html">Accueil</a>
+      <a href="legal.html#accessibilite">Accessibilité</a>
+      <a href="legal.html#mentions">Mentions légales</a>
+      <a href="legal.html#confidentialite">Confidentialité</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/js/config.js?v=1787907977"></script>
+<script>
+const form = document.getElementById("login-form");
+const msg = document.getElementById("msg");
+
+const urlMsg = new URLSearchParams(location.search).get("msg");
+if (urlMsg) {
+  const box = document.getElementById("url-msg");
+  box.className = "msg error";
+  box.textContent = urlMsg;
+  box.classList.remove("hidden");
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  msg.className = "msg"; msg.textContent = "";
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error) {
+    msg.className = "msg error";
+    msg.textContent = error.message;
+    return;
+  }
+
+  // "next" n'est autorisé que vers verify.html (widget de vérification d'âge) pour éviter toute redirection ouverte.
+  const next = new URLSearchParams(location.search).get("next");
+  if (next && next.startsWith("verify.html")) {
+    window.location.href = next;
+    return;
+  }
+
+  const { data: profile } = await supabaseClient
+    .from("profiles")
+    .select("role")
+    .eq("id", data.user.id)
+    .maybeSingle();
+
+  window.location.href = (profile && profile.role === "merchant") ? "merchant.html" : "dashboard.html";
+});
+</script>
+
+</body>
+</html>

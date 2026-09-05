@@ -1,0 +1,16 @@
+{
+  "name": "amalgamg3-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server letting Claude manage an amalgamG3 merchant account: create and edit verification buttons, get their embed code, update the merchant profile.",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "amalgamg3-mcp": "index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  }
+}
