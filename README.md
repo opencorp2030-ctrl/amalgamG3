@@ -1,3 +1,5 @@
+Bienvenue sur le projet amalgamG3 !
+
 # amalgamG3
 
 Une carte d'identité numérique vérifiée pour le commerce : les particuliers créent un compte,
@@ -69,7 +71,15 @@ Les identifiants Supabase (URL + clé anonyme) sont dans `assets/js/config.js` �
 prévue pour être publique, l'accès aux données est imposé par les policies RLS et les Edge
 Functions côté Supabase, pas par le secret de la clé.
 
+## Remerciements
+
+Merci à tous les contributeurs qui participent à l'amélioration et au développement d'amalgamG3 !
+
 ## Mentions légales
 
 Le contenu de `legal.html` contient des champs à compléter (identité de l'éditeur, SIRET, contact)
 avant une mise en production définitive — voir les marqueurs "à compléter" dans le fichier.
+
+## Licence
+
+Ce projet est sous licence MIT.
